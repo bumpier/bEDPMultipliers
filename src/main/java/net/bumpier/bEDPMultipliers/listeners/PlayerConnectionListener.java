@@ -19,7 +19,6 @@ public class PlayerConnectionListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        // Delay by one tick to ensure player is fully loaded
         bossBarManager.updateBossBarForPlayer(player);
     }
 

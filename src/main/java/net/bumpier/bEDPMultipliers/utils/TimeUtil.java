@@ -50,5 +50,4 @@ public class TimeUtil {
 
         return sb.toString().trim();
     }
-    // Note: A utility for parsing and formatting time strings like "1d2h3m".
 }

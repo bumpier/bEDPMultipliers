@@ -1,6 +1,7 @@
 // File: src/main/java/net/bumpier/bedpmultipliers/BEDPMultipliers.java
 package net.bumpier.bedpmultipliers;
 
+import net.bumpier.bedpmultipliers.api.MultiplierPlaceholders;
 import net.bumpier.bedpmultipliers.commands.BMultiCommand;
 import net.bumpier.bedpmultipliers.listeners.MultiplierListener;
 import net.bumpier.bedpmultipliers.listeners.PlayerConnectionListener;
@@ -33,11 +34,17 @@ public final class BEDPMultipliers extends JavaPlugin {
         this.multiplierManager = new MultiplierManager(this, configManager, debugLogger);
         this.bossBarManager = new BossBarManager(this, configManager, multiplierManager);
 
-        // Initialize the boss bar manager after all other managers are ready.
         bossBarManager.initialize();
 
         registerCommands();
         registerListeners();
+
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new MultiplierPlaceholders(this, multiplierManager).register();
+            debugLogger.log("Successfully hooked into PlaceholderAPI.");
+        } else {
+            debugLogger.log("PlaceholderAPI not found, skipping hook.");
+        }
 
         debugLogger.log("bEDPMultipliers has been enabled successfully.");
     }

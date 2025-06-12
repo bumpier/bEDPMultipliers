@@ -4,6 +4,7 @@ version: '${project.version}'
 main: net.bumpier.bedpmultipliers.BEDPMultipliers
 api-version: '1.21'
 depend: [EdPrison]
+softdepend: [PlaceholderAPI]
 authors: [bumpier.dev]
 description: A multiplier handler for EdPrison.
 commands:

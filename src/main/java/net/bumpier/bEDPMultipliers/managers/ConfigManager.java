@@ -18,33 +18,27 @@ public class ConfigManager {
     private final JavaPlugin plugin;
     private FileConfiguration config;
     private FileConfiguration messagesConfig;
-    private File configFile;
-    private File messagesFile;
+    private final File configFile;
+    private final File messagesFile;
 
     private boolean debug;
     private double globalMultiplier;
-
-    // BossBar settings
     private boolean bossBarEnabled;
     private BarColor bossBarColor;
     private BarStyle bossBarStyle;
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
+        this.configFile = new File(plugin.getDataFolder(), "config.yml");
+        this.messagesFile = new File(plugin.getDataFolder(), "messages.yml");
         loadConfigs();
     }
 
     public void loadConfigs() {
-        if (configFile == null) {
-            configFile = new File(plugin.getDataFolder(), "config.yml");
-        }
         if (!configFile.exists()) {
             plugin.saveResource("config.yml", false);
         }
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-        if(!messagesFile.exists()){
+        if (!messagesFile.exists()) {
             plugin.saveResource("messages.yml", false);
         }
 
@@ -57,8 +51,6 @@ public class ConfigManager {
     private void loadValues() {
         this.debug = config.getBoolean("debug", false);
         this.globalMultiplier = config.getDouble("global-multiplier", 1.0);
-
-        // Load BossBar settings
         this.bossBarEnabled = config.getBoolean("bossbar.enabled", true);
         try {
             this.bossBarColor = BarColor.valueOf(config.getString("bossbar.color", "GREEN").toUpperCase());
@@ -80,13 +72,11 @@ public class ConfigManager {
     }
 
     private String formatColors(String text) {
-        // Hex color pattern for &#RRGGBB
         Pattern hexPattern = Pattern.compile("&#([A-Fa-f0-9]{6})");
         Matcher matcher = hexPattern.matcher(text);
         while (matcher.find()) {
             text = text.replace(matcher.group(), ChatColor.of("#" + matcher.group(1)).toString());
         }
-        // Legacy color codes
         return ChatColor.translateAlternateColorCodes('&', text);
     }
 

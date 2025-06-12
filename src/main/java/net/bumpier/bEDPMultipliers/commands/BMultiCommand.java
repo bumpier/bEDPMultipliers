@@ -12,8 +12,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.concurrent.TimeUnit;
-
 public class BMultiCommand implements CommandExecutor {
 
     private final MultiplierManager multiplierManager;
@@ -41,8 +39,7 @@ public class BMultiCommand implements CommandExecutor {
             case "remove":
                 handleRemove(sender, args);
                 break;
-            case "check": // Added an explicit "check" subcommand for clarity
-            default:
+            default: // Handles both "check" and default usage like /bmulti <player>
                 handleCheck(sender, args);
                 break;
         }
@@ -56,16 +53,16 @@ public class BMultiCommand implements CommandExecutor {
         }
 
         OfflinePlayer target;
-        if (args.length >= 2) {
-            target = Bukkit.getOfflinePlayer(args[1]);
-        } else if (sender instanceof Player) {
-            target = (Player) sender;
-        } else {
-            sender.sendMessage(ChatColor.RED + "Usage: /bmulti check <player>");
+        String targetName = args.length > 0 ? args[0] : (sender instanceof Player ? sender.getName() : null);
+
+        if (targetName == null) {
+            sender.sendMessage(ChatColor.RED + "Usage: /bmulti <player>");
             return;
         }
 
-        if (target == null || !target.hasPlayedBefore()) {
+        target = Bukkit.getOfflinePlayer(targetName);
+
+        if (!target.hasPlayedBefore() && !target.isOnline()) {
             sender.sendMessage(configManager.getMessage("player-not-found"));
             return;
         }
@@ -101,7 +98,7 @@ public class BMultiCommand implements CommandExecutor {
             sender.sendMessage(configManager.getMessage("set-global-multiplier").replace("%amount%", String.valueOf(amount)));
         } else {
             OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-            if (target == null || !target.hasPlayedBefore()) {
+            if (!target.hasPlayedBefore() && !target.isOnline()) {
                 sender.sendMessage(configManager.getMessage("player-not-found"));
                 return;
             }
@@ -146,7 +143,7 @@ public class BMultiCommand implements CommandExecutor {
                     .replace("%time%", formattedTime));
         } else {
             OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-            if (target == null || !target.hasPlayedBefore()) {
+            if (!target.hasPlayedBefore() && !target.isOnline()) {
                 sender.sendMessage(configManager.getMessage("player-not-found"));
                 return;
             }
@@ -170,12 +167,12 @@ public class BMultiCommand implements CommandExecutor {
 
         String targetName = args[1];
         if (targetName.equalsIgnoreCase("global")) {
-            configManager.setGlobalMultiplier(1.0); // Reset to default
+            configManager.setGlobalMultiplier(1.0); // Reset permanent global to default
             multiplierManager.removeGlobalTempMultiplier();
             sender.sendMessage(configManager.getMessage("remove-global-multiplier"));
         } else {
             OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-            if (target == null || !target.hasPlayedBefore()) {
+            if (!target.hasPlayedBefore() && !target.isOnline()) {
                 sender.sendMessage(configManager.getMessage("player-not-found"));
                 return;
             }
@@ -195,5 +192,4 @@ public class BMultiCommand implements CommandExecutor {
             sender.sendMessage(ChatColor.YELLOW + "/bmulti remove <player/global> - Remove a multiplier.");
         }
     }
-    // Note: This class handles all command logic, splitting functionality into private methods for clarity.
 }

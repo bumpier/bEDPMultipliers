@@ -38,7 +38,7 @@ public class BossBarManager {
                     updateBossBarForPlayer(player);
                 }
             }
-        }.runTaskTimerAsynchronously(plugin, 0L, 20L); // Update every second
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     public void shutdown() {
@@ -64,7 +64,6 @@ public class BossBarManager {
         long personalExpiry = multiplierManager.getPlayerTempExpiry(uuid);
         long globalExpiry = multiplierManager.getGlobalTempExpiry();
 
-        // Player's personal multiplier takes priority
         if (personalExpiry > System.currentTimeMillis()) {
             double amount = multiplierManager.getPlayerTempMultiplier(uuid);
             long totalDuration = multiplierManager.getPlayerTempDuration(uuid);
@@ -101,6 +100,9 @@ public class BossBarManager {
 
         bar.setProgress(progress);
         bar.setTitle(title);
+        if (!bar.isVisible()) {
+            bar.setVisible(true);
+        }
     }
 
     public void removeBossBar(Player player) {

@@ -55,21 +55,11 @@ public class MultiplierManager {
     }
 
     public double getTotalMultiplier(OfflinePlayer player) {
-        double total = configManager.getGlobalMultiplier(); // Start with global
-        debugLogger.log("Player " + player.getName() + " base (global) multiplier: " + total);
-
+        double total = configManager.getGlobalMultiplier();
         total += getPlayerMultiplier(player.getUniqueId()) - 1.0;
-        debugLogger.log("After permanent player multi: " + total);
-
         total += getPlayerTempMultiplier(player.getUniqueId()) - 1.0;
-        debugLogger.log("After temporary player multi: " + total);
-
         total += getGlobalTempMultiplier() - 1.0;
-        debugLogger.log("After global temp multi: " + total);
-
         total += getPermissionMultiplier(player) - 1.0;
-        debugLogger.log("After permission multi: " + total);
-
         return Math.max(0, total);
     }
 
@@ -86,8 +76,6 @@ public class MultiplierManager {
         dataConfig.set("players." + uuid, null);
         saveData();
     }
-
-    // --- Temporary Multiplier Getters & Setters ---
 
     public double getPlayerTempMultiplier(UUID uuid) {
         if (getPlayerTempExpiry(uuid) > System.currentTimeMillis()) {
@@ -140,8 +128,14 @@ public class MultiplierManager {
         saveData();
     }
 
+    public double getActiveTempMultiplier(OfflinePlayer player) {
+        double personalTemp = getPlayerTempMultiplier(player.getUniqueId());
+        double globalTemp = getGlobalTempMultiplier();
+        return Math.max(personalTemp, globalTemp);
+    }
+
     public double getPermissionMultiplier(OfflinePlayer player) {
-        if (!player.isOnline()) {
+        if (!player.isOnline() || player.getPlayer() == null) {
             return 1.0;
         }
         double highestPermMulti = 0;
@@ -153,7 +147,8 @@ public class MultiplierManager {
                     if (multi > highestPermMulti) {
                         highestPermMulti = multi;
                     }
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
         return highestPermMulti > 0 ? highestPermMulti : 1.0;

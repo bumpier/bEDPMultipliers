@@ -16,6 +16,4 @@ public class DebugLogger {
             Bukkit.getLogger().info("[bEDPMultipliers][DEBUG] " + message);
         }
     }
-
-    // Note: A simple shared utility for togglable debug messages.
 }
