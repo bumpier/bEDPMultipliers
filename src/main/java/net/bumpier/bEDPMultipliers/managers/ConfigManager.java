@@ -1,6 +1,7 @@
 // File: src/main/java/net/bumpier/bedpmultipliers/managers/ConfigManager.java
 package net.bumpier.bedpmultipliers.managers;
 
+import net.bumpier.bedpmultipliers.utils.DebugLogger;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -20,7 +21,6 @@ import java.util.stream.Collectors;
 
 public final class ConfigManager {
 
-    // Note: Regex pattern is now compiled only once for efficiency.
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
     private final JavaPlugin plugin;
@@ -35,6 +35,7 @@ public final class ConfigManager {
     private BarColor bossBarColor;
     private BarStyle bossBarStyle;
     private Map<String, String> currencyFormats;
+    private String pluginPrefix; // New field for the prefix
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -57,6 +58,9 @@ public final class ConfigManager {
     }
 
     private void loadValues() {
+        // Load plugin prefix from messages.yml
+        this.pluginPrefix = messagesConfig.getString("plugin-prefix", "&8[&6Multipliers&8] &r");
+
         this.debug = config.getBoolean("debug", false);
         this.globalMultiplier = config.getDouble("global-multiplier", 1.0);
         this.bossBarEnabled = config.getBoolean("bossbar.enabled", true);
@@ -86,14 +90,17 @@ public final class ConfigManager {
         }
     }
 
-    public String getFormattedCurrency(String currencyId) {
-        if (currencyId.equalsIgnoreCase("All")) return "All";
-        return currencyFormats.getOrDefault(currencyId.toLowerCase(), currencyId);
-    }
-
+    /**
+     * Gets a single message from messages.yml and prepends the plugin prefix.
+     * @param path The path to the message.
+     * @return The formatted and prefixed message.
+     */
     public String getMessage(String path) {
         String message = messagesConfig.getString(path, "&cMessage not found: " + path);
-        return formatColors(message);
+        if (message.isEmpty()) {
+            return "";
+        }
+        return formatColors(pluginPrefix + message);
     }
 
     public List<String> getMessageList(String path) {
@@ -111,9 +118,16 @@ public final class ConfigManager {
     }
 
     // Getters
+    public String getFormattedCurrency(String currencyId) {
+        if (currencyId.equalsIgnoreCase("All")) return "All";
+        return currencyFormats.getOrDefault(currencyId.toLowerCase(), currencyId);
+    }
     public boolean isDebug() { return debug; }
     public double getGlobalMultiplier() { return globalMultiplier; }
     public boolean isBossBarEnabled() { return bossBarEnabled; }
     public BarColor getBossBarColor() { return bossBarColor; }
     public BarStyle getBossBarStyle() { return bossBarStyle; }
+    public String getStorageString(String path, String def) { return config.getString(path, def); }
+    public int getStorageInt(String path, int def) { return config.getInt(path, def); }
+    public boolean isStorageSslEnabled() { return config.getBoolean("storage.mysql.ssl", false); }
 }
