@@ -1,7 +1,9 @@
 # User-specific stuff
 .idea/
 /libs/
+/src/
 
+*.xml
 
 *.iml
 *.ipr
