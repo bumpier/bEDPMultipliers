@@ -1,5 +1,23 @@
+# File: src/main/resources/plugin.yml
 name: bEDPMultipliers
-version: '1'
-main: net.bumpier.bEDPMultipliers.BEDPMultipliers
+version: '${project.version}'
+main: net.bumpier.bedpmultipliers.BEDPMultipliers
 api-version: '1.21'
-authors: [ bumpier ]
+depend: [EdPrison]
+authors: [bumpier.dev]
+description: A multiplier handler for EdPrison.
+commands:
+  bmulti:
+    description: Main command for bEDPMultipliers.
+    usage: /bmulti <args>
+    permission: bmultipliers.player
+permissions:
+  bmultipliers.player:
+    description: Allows checking multipliers.
+    default: op
+  bmultipliers.admin:
+    description: Allows admin commands for multipliers.
+    default: op
+  bmultipliers.multi.*:
+    description: Provides a multiplier based on the final number.
+    default: op

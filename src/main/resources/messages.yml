@@ -1,0 +1,24 @@
+# File: src/main/resources/messages.yml
+# Messages for bEDPMultipliers
+# Supports standard (&) and hex (&#RRGGBB) color codes.
+
+no-permission: "&#FF0000You do not have permission to do that."
+player-not-found: "&#FF0000Player not found."
+invalid-number: "&#FF0000That is not a valid number."
+invalid-time-format: "&#FF0000Invalid time format. Use d, h, m, s (e.g., 1d12h)."
+
+check-multiplier: "&#FFFF00%player%'s current total multiplier is &#00FF00%multiplier%x."
+
+set-global-multiplier: "&#00FF00Set the global multiplier to &#FFFF00%amount%x."
+set-player-multiplier: "&#00FF00Set &#FFFF00%player%'s &#00FF00permanent multiplier to &#FFFF00%amount%x."
+set-global-temp-multiplier: "&#00FF00Set the global temporary multiplier to &#FFFF00%amount%x &#00FF00for &#FFFF00%time%."
+set-player-temp-multiplier: "&#00FF00Set &#FFFF00%player%'s &#00FF00temporary multiplier to &#FFFF00%amount%x &#00FF00for &#FFFF00%time%."
+
+remove-global-multiplier: "&#00FF00Removed the global multipliers."
+remove-player-multiplier: "&#00FF00Removed all multipliers for &#FFFF00%player%."
+
+# BossBar Messages
+# %amount% - The multiplier amount (e.g., 2.0)
+# %time% - The formatted time remaining (e.g., 5m 30s)
+bossbar-personal-text: "&aPersonal Multiplier: &e%amount%x &afor &e%time%"
+bossbar-global-text: "&aGlobal Multiplier: &e%amount%x &afor &e%time%"

@@ -1,0 +1,19 @@
+# File: src/main/resources/config.yml
+# bEDPMultipliers Configuration
+
+# Enable debug messages in the console.
+debug: false
+
+# The base multiplier applied to all players.
+# This value is combined with other multipliers.
+global-multiplier: 1.0
+
+# --- BossBar Settings ---
+# Settings for the temporary multiplier bossbar.
+bossbar:
+  # Set to true to enable the bossbar, false to disable.
+  enabled: true
+  # You can use any of these colors: BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+  color: "GREEN"
+  # You can use any of these styles: SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
+  style: "SOLID"
