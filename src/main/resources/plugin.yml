@@ -1,0 +1,5 @@
+name: bEDPMultipliers
+version: '1'
+main: net.bumpier.bEDPMultipliers.BEDPMultipliers
+api-version: '1.21'
+authors: [ bumpier ]
