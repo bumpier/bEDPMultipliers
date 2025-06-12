@@ -8,9 +8,8 @@ import net.bumpier.bedpmultipliers.utils.TimeUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -19,7 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class BMultiCommand implements CommandExecutor, TabCompleter {
+public final class BMultiCommand implements TabExecutor {
 
     private final BEDPMultipliers plugin;
     private final MultiplierManager multiplierManager;
@@ -38,27 +37,46 @@ public class BMultiCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Handle reload command
-        if (args[0].equalsIgnoreCase("reload")) {
+        String subCommand = args[0].toLowerCase();
+
+        if ("reload".equals(subCommand)) {
             handleReload(sender);
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
-            case "set":
-                handleSet(sender, args);
-                break;
-            case "settemp":
-                handleSetTemp(sender, args);
-                break;
-            case "remove":
-                handleRemove(sender, args);
-                break;
-            default:
-                handleCheck(sender, args);
-                break;
+        switch (subCommand) {
+            case "set" -> handleSet(sender, args);
+            case "settemp" -> handleSetTemp(sender, args);
+            case "remove" -> handleRemove(sender, args);
+            default -> handleCheck(sender, args);
         }
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            List<String> subCommands = new ArrayList<>(List.of("set", "settemp", "remove", "reload"));
+            return Stream.concat(
+                    subCommands.stream(),
+                    Bukkit.getOnlinePlayers().stream().map(Player::getName)
+            ).filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase())).collect(Collectors.toList());
+        }
+
+        if (args.length == 2) {
+            if (List.of("set", "settemp", "remove").contains(args[0].toLowerCase())) {
+                List<String> completions = Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
+                completions.add("global");
+                return completions.stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
+            } else if (sender.hasPermission("bmultipliers.player") && !args[0].equalsIgnoreCase("reload")) {
+                return List.of("list").stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    private void sendUsage(CommandSender sender) {
+        configManager.getMessageList("help-message").forEach(sender::sendMessage);
     }
 
     private void handleReload(CommandSender sender) {
@@ -69,8 +87,6 @@ public class BMultiCommand implements CommandExecutor, TabCompleter {
         plugin.reloadPlugin();
         sender.sendMessage(configManager.getMessage("reload-success"));
     }
-
-    // ... (All other handle methods like handleCheck, handleSet, etc. remain unchanged)
 
     private void handleCheck(CommandSender sender, String[] args) {
         if (!sender.hasPermission("bmultipliers.player")) {
@@ -231,9 +247,9 @@ public class BMultiCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(configManager.getMessage("usage-remove"));
             return;
         }
+        String targetName = args[1];
         String currency = (args.length > 2) ? args[2].toLowerCase() : multiplierManager.getGlobalCurrencyKey();
         String currencyDisplay = currency.equals(multiplierManager.getGlobalCurrencyKey()) ? "All" : configManager.getFormattedCurrency(currency);
-        String targetName = args[1];
 
         if (targetName.equalsIgnoreCase("global")) {
             multiplierManager.removeGlobalTemporaryMultiplier(currency);
@@ -250,31 +266,5 @@ public class BMultiCommand implements CommandExecutor, TabCompleter {
                     .replace("%player%", target.getName())
                     .replace("%currency%", currencyDisplay));
         }
-    }
-
-    private void sendUsage(CommandSender sender) {
-        configManager.getMessageList("help-message").forEach(sender::sendMessage);
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            List<String> subCommands = new ArrayList<>(List.of("set", "settemp", "remove", "reload"));
-            return Stream.concat(
-                    subCommands.stream(),
-                    Bukkit.getOnlinePlayers().stream().map(Player::getName)
-            ).filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase())).collect(Collectors.toList());
-        }
-
-        if (args.length == 2) {
-            if (List.of("set", "settemp", "remove").contains(args[0].toLowerCase())) {
-                List<String> completions = Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
-                completions.add("global");
-                return completions.stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
-            } else if (sender.hasPermission("bmultipliers.player") && !args[0].equalsIgnoreCase("reload")) {
-                return List.of("list").stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
-            }
-        }
-        return new ArrayList<>();
     }
 }

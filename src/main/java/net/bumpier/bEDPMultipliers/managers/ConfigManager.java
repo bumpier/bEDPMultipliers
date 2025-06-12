@@ -18,7 +18,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class ConfigManager {
+public final class ConfigManager {
+
+    // Note: Regex pattern is now compiled only once for efficiency.
+    private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
     private final JavaPlugin plugin;
     private FileConfiguration config;
@@ -37,7 +40,6 @@ public class ConfigManager {
         this.plugin = plugin;
         this.configFile = new File(plugin.getDataFolder(), "config.yml");
         this.messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        // Load all configs immediately on creation for reliability
         loadConfigs();
     }
 
@@ -51,7 +53,6 @@ public class ConfigManager {
 
         config = YamlConfiguration.loadConfiguration(configFile);
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-
         loadValues();
     }
 
@@ -102,8 +103,7 @@ public class ConfigManager {
     }
 
     public String formatColors(String text) {
-        Pattern hexPattern = Pattern.compile("&#([A-Fa-f0-9]{6})");
-        Matcher matcher = hexPattern.matcher(text);
+        Matcher matcher = HEX_PATTERN.matcher(text);
         while (matcher.find()) {
             text = text.replace(matcher.group(), ChatColor.of("#" + matcher.group(1)).toString());
         }

@@ -13,26 +13,27 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-public class MultiplierManager {
+public final class MultiplierManager {
+
+    // Note: Made this a static final constant for clarity and performance.
+    private static final String GLOBAL_CURRENCY_KEY = "__global__";
 
     private final JavaPlugin plugin;
     private final net.bumpier.bedpmultipliers.managers.ConfigManager configManager;
     private final DebugLogger debugLogger;
-    private File dataFile;
+    private final File dataFile;
     private FileConfiguration dataConfig;
-    private final String GLOBAL_CURRENCY_KEY = "__global__";
+    private boolean dirty = false; // Note: New dirty flag for optimized saving.
 
     public MultiplierManager(JavaPlugin plugin, net.bumpier.bedpmultipliers.managers.ConfigManager configManager, DebugLogger debugLogger) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.debugLogger = debugLogger;
+        this.dataFile = new File(plugin.getDataFolder(), "data.yml");
         loadData();
     }
 
-    public void loadData() {
-        if (dataFile == null) {
-            dataFile = new File(plugin.getDataFolder(), "data.yml");
-        }
+    private void loadData() {
         if (!dataFile.exists()) {
             try {
                 if (dataFile.createNewFile()) {
@@ -46,10 +47,15 @@ public class MultiplierManager {
         debugLogger.log("Data file loaded.");
     }
 
-    public void saveData() {
+    // Note: saveData now only writes to disk if changes have been made (or if forced).
+    public synchronized void saveData(boolean force) {
+        if (!dirty && !force) {
+            return;
+        }
         try {
             dataConfig.save(dataFile);
-            debugLogger.log("Data file saved.");
+            dirty = false;
+            debugLogger.log("Data file saved to disk.");
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save data.yml!");
             e.printStackTrace();
@@ -63,12 +69,7 @@ public class MultiplierManager {
         double permissionMulti = getPermissionMultiplier(player);
         double configGlobalMulti = configManager.getGlobalMultiplier();
 
-        double total = configGlobalMulti;
-        total += (permanentPlayerMulti - 1.0);
-        total += (temporaryPlayerMulti - 1.0);
-        total += (temporaryGlobalMulti - 1.0);
-        total += (permissionMulti - 1.0);
-
+        double total = configGlobalMulti + (permanentPlayerMulti - 1.0) + (temporaryPlayerMulti - 1.0) + (temporaryGlobalMulti - 1.0) + (permissionMulti - 1.0);
         return Math.max(1.0, total);
     }
 
@@ -76,19 +77,49 @@ public class MultiplierManager {
         return GLOBAL_CURRENCY_KEY;
     }
 
-    public double getPlayerPermanentMultiplier(UUID uuid, String currency) {
-        String path = "players." + uuid + ".permanent.";
-        return dataConfig.getDouble(path + currency, dataConfig.getDouble(path + GLOBAL_CURRENCY_KEY, 1.0));
-    }
-
     public void setPlayerPermanentMultiplier(UUID uuid, String currency, double amount) {
         dataConfig.set("players." + uuid + ".permanent." + currency, amount);
-        saveData();
+        dirty = true;
     }
 
     public void removePlayerPermanentMultiplier(UUID uuid, String currency) {
         dataConfig.set("players." + uuid + ".permanent." + currency, null);
-        saveData();
+        dirty = true;
+    }
+
+    public void setPlayerTemporaryMultiplier(UUID uuid, String currency, double amount, long duration) {
+        String path = "players." + uuid + ".temporary." + currency;
+        dataConfig.set(path + ".amount", amount);
+        dataConfig.set(path + ".duration", duration);
+        dataConfig.set(path + ".expiry", System.currentTimeMillis() + duration);
+        dataConfig.set(path + ".appliedAt", System.currentTimeMillis());
+        dirty = true;
+    }
+
+    public void removePlayerTemporaryMultiplier(UUID uuid, String currency) {
+        dataConfig.set("players." + uuid + ".temporary." + currency, null);
+        dirty = true;
+    }
+
+    public void setGlobalTemporaryMultiplier(String currency, double amount, long duration) {
+        String path = "global.temporary." + currency;
+        dataConfig.set(path + ".amount", amount);
+        dataConfig.set(path + ".duration", duration);
+        dataConfig.set(path + ".expiry", System.currentTimeMillis() + duration);
+        dataConfig.set(path + ".appliedAt", System.currentTimeMillis());
+        dirty = true;
+    }
+
+    public void removeGlobalTemporaryMultiplier(String currency) {
+        dataConfig.set("global.temporary." + currency, null);
+        dirty = true;
+    }
+
+    // --- Getter methods remain largely unchanged ---
+
+    public double getPlayerPermanentMultiplier(UUID uuid, String currency) {
+        String path = "players." + uuid + ".permanent.";
+        return dataConfig.getDouble(path + currency, dataConfig.getDouble(path + GLOBAL_CURRENCY_KEY, 1.0));
     }
 
     public Map<String, Double> getAllPlayerPermanentMultipliers(UUID uuid) {
@@ -117,20 +148,6 @@ public class MultiplierManager {
     public Map<String, Object> getPlayerTemporaryData(UUID uuid, String currency) {
         ConfigurationSection section = dataConfig.getConfigurationSection("players." + uuid + ".temporary." + currency);
         return section != null ? section.getValues(false) : Collections.emptyMap();
-    }
-
-    public void setPlayerTemporaryMultiplier(UUID uuid, String currency, double amount, long duration) {
-        String path = "players." + uuid + ".temporary." + currency;
-        dataConfig.set(path + ".amount", amount);
-        dataConfig.set(path + ".duration", duration);
-        dataConfig.set(path + ".expiry", System.currentTimeMillis() + duration);
-        dataConfig.set(path + ".appliedAt", System.currentTimeMillis());
-        saveData();
-    }
-
-    public void removePlayerTemporaryMultiplier(UUID uuid, String currency) {
-        dataConfig.set("players." + uuid + ".temporary." + currency, null);
-        saveData();
     }
 
     public Map<String, Map<String, Object>> getAllPlayerTemporaryMultipliers(UUID uuid) {
@@ -164,20 +181,6 @@ public class MultiplierManager {
         return section != null ? section.getValues(false) : Collections.emptyMap();
     }
 
-    public void setGlobalTemporaryMultiplier(String currency, double amount, long duration) {
-        String path = "global.temporary." + currency;
-        dataConfig.set(path + ".amount", amount);
-        dataConfig.set(path + ".duration", duration);
-        dataConfig.set(path + ".expiry", System.currentTimeMillis() + duration);
-        dataConfig.set(path + ".appliedAt", System.currentTimeMillis());
-        saveData();
-    }
-
-    public void removeGlobalTemporaryMultiplier(String currency) {
-        dataConfig.set("global.temporary." + currency, null);
-        saveData();
-    }
-
     public double getPermissionMultiplier(OfflinePlayer player) {
         if (!player.isOnline() || player.getPlayer() == null) return 1.0;
         double highestPermMulti = 0;
@@ -201,7 +204,6 @@ public class MultiplierManager {
                     .map(key -> {
                         Map<String, Object> data = new HashMap<>(personalSection.getConfigurationSection(key).getValues(false));
                         data.put("currency", key);
-                        data.put("isGlobal", false);
                         return data;
                     })
                     .filter(this::isTempActive)
@@ -213,7 +215,6 @@ public class MultiplierManager {
                     .map(key -> {
                         Map<String, Object> data = new HashMap<>(globalSection.getConfigurationSection(key).getValues(false));
                         data.put("currency", key);
-                        data.put("isGlobal", true);
                         return data;
                     })
                     .filter(this::isTempActive)
@@ -230,32 +231,16 @@ public class MultiplierManager {
         return expiry > System.currentTimeMillis();
     }
 
-    // --- New Methods for Old Placeholders ---
-
-    /**
-     * Calculates the total multiplier using only non-currency-specific values.
-     * For use with the old %bmulti_totalmulti% placeholder.
-     */
     public double getGlobalTotalMultiplier(OfflinePlayer player) {
         double permanentPlayerMulti = getPlayerPermanentMultiplier(player.getUniqueId(), GLOBAL_CURRENCY_KEY);
         double temporaryPlayerMulti = getPlayerTemporaryMultiplier(player.getUniqueId(), GLOBAL_CURRENCY_KEY);
         double temporaryGlobalMulti = getGlobalTemporaryMultiplier(GLOBAL_CURRENCY_KEY);
         double permissionMulti = getPermissionMultiplier(player);
         double configGlobalMulti = configManager.getGlobalMultiplier();
-
-        double total = configGlobalMulti;
-        total += (permanentPlayerMulti - 1.0);
-        total += (temporaryPlayerMulti - 1.0);
-        total += (temporaryGlobalMulti - 1.0);
-        total += (permissionMulti - 1.0);
-
+        double total = configGlobalMulti + (permanentPlayerMulti - 1.0) + (temporaryPlayerMulti - 1.0) + (temporaryGlobalMulti - 1.0) + (permissionMulti - 1.0);
         return Math.max(1.0, total);
     }
 
-    /**
-     * Gets the highest active "all-currency" temporary multiplier for a player.
-     * For use with the old %bmulti_tempmulti% placeholder.
-     */
     public double getGlobalActiveTempMultiplier(OfflinePlayer player) {
         double playerTemp = getPlayerTemporaryMultiplier(player.getUniqueId(), GLOBAL_CURRENCY_KEY);
         double globalTemp = getGlobalTemporaryMultiplier(GLOBAL_CURRENCY_KEY);

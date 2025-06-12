@@ -11,15 +11,17 @@ import net.bumpier.bedpmultipliers.managers.MultiplierManager;
 import net.bumpier.bedpmultipliers.utils.DebugLogger;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Objects;
 
 public final class BEDPMultipliers extends JavaPlugin {
 
-    private ConfigManager configManager;
-    private BossBarManager bossBarManager;
-    private DebugLogger debugLogger;
-    private MultiplierManager multiplierManager;
+    private final ConfigManager configManager = new ConfigManager(this);
+    private final DebugLogger debugLogger = new DebugLogger(configManager);
+    private final MultiplierManager multiplierManager = new MultiplierManager(this, configManager, debugLogger);
+    private final BossBarManager bossBarManager = new BossBarManager(this, configManager, multiplierManager);
+    private BukkitTask dataSaveTask;
 
     @Override
     public void onEnable() {
@@ -28,12 +30,6 @@ public final class BEDPMultipliers extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-
-        // Simplified and more robust initialization order
-        this.configManager = new ConfigManager(this);
-        this.debugLogger = new DebugLogger(configManager);
-        this.multiplierManager = new MultiplierManager(this, configManager, debugLogger);
-        this.bossBarManager = new BossBarManager(this, configManager, multiplierManager);
 
         bossBarManager.initialize();
 
@@ -47,31 +43,45 @@ public final class BEDPMultipliers extends JavaPlugin {
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new MultiplierPlaceholders(this, multiplierManager).register();
             debugLogger.log("Successfully hooked into PlaceholderAPI.");
-        } else {
-            debugLogger.log("PlaceholderAPI not found, skipping hook.");
         }
 
+        // Schedule periodic data saving
+        startDataSaveTask();
+
         debugLogger.log("bEDPMultipliers has been enabled successfully.");
+    }
+
+    @Override
+    public void onDisable() {
+        if (dataSaveTask != null) {
+            dataSaveTask.cancel();
+        }
+        bossBarManager.shutdown();
+        multiplierManager.saveData(true); // Force save on shutdown
+        debugLogger.log("bEDPMultipliers has been disabled.");
     }
 
     public void reloadPlugin() {
         debugLogger.log("Reloading plugin configurations...");
         configManager.loadConfigs();
+
         bossBarManager.shutdown();
         bossBarManager.initialize();
+
+        if (dataSaveTask != null) {
+            dataSaveTask.cancel();
+        }
+        startDataSaveTask();
+
         debugLogger.log("Plugin configurations reloaded.");
     }
 
-    @Override
-    public void onDisable() {
-        if (bossBarManager != null) {
-            bossBarManager.shutdown();
-        }
-        if (multiplierManager != null) {
-            multiplierManager.saveData();
-        }
-        if (debugLogger != null) {
-            debugLogger.log("bEDPMultipliers has been disabled.");
-        }
+    private void startDataSaveTask() {
+        // Save data every 5 minutes (20 ticks/sec * 60 sec/min * 5 min)
+        long saveInterval = 20 * 60 * 5;
+        this.dataSaveTask = Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+            multiplierManager.saveData(false); // Save only if dirty
+        }, saveInterval, saveInterval);
+        debugLogger.log("Data saving task scheduled to run every 5 minutes.");
     }
 }
