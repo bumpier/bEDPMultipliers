@@ -4,16 +4,23 @@
 # Enable debug messages in the console.
 debug: false
 
-# The base multiplier applied to all players.
-# This value is combined with other multipliers.
+# The base multiplier applied to all players when no other multipliers are found.
 global-multiplier: 1.0
 
 # --- BossBar Settings ---
-# Settings for the temporary multiplier bossbar.
 bossbar:
-  # Set to true to enable the bossbar, false to disable.
   enabled: true
-  # You can use any of these colors: BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
   color: "GREEN"
-  # You can use any of these styles: SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
   style: "SOLID"
+
+# --- Currency Formatting ---
+# The key (e.g., 'tokens_currency') is just for organization and is not used.
+# The 'id' MUST match the currency name used by EdPrison exactly (case-insensitive).
+# The 'formatted' name is what will be shown in all messages and on the bossbar.
+currencies:
+  tokens_currency:
+    id: 'tokens'
+    formatted: '&eTokens'
+  money_currency:
+    id: 'money'
+    formatted: '&aMoney'

@@ -34,6 +34,7 @@ public class TimeUtil {
     }
 
     public static String formatDuration(long millis) {
+        if (millis < 0) millis = 0;
         long days = TimeUnit.MILLISECONDS.toDays(millis);
         millis -= TimeUnit.DAYS.toMillis(days);
         long hours = TimeUnit.MILLISECONDS.toHours(millis);

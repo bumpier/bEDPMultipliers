@@ -46,17 +46,27 @@ public class MultiplierPlaceholders extends PlaceholderExpansion {
             return "";
         }
 
+        // Handles %bmulti_multi_<currency>%
+        if (params.startsWith("multi_")) {
+            String currency = params.substring("multi_".length()).toLowerCase();
+            if (currency.isEmpty()) {
+                return "0.0";
+            }
+            double totalMulti = multiplierManager.getTotalMultiplier(player, currency);
+            return df.format(totalMulti);
+        }
+
         switch (params) {
             case "rankmulti":
                 return df.format(multiplierManager.getPermissionMultiplier(player));
             case "personalmulti":
-                return df.format(multiplierManager.getPlayerMultiplier(player.getUniqueId()));
+                return df.format(multiplierManager.getPlayerPermanentMultiplier(player.getUniqueId(), multiplierManager.getGlobalCurrencyKey()));
             case "tempmulti":
-                return df.format(multiplierManager.getActiveTempMultiplier(player));
+                return df.format(multiplierManager.getGlobalActiveTempMultiplier(player));
             case "totalmulti":
-                return df.format(multiplierManager.getTotalMultiplier(player));
-            default:
-                return null;
+                return df.format(multiplierManager.getGlobalTotalMultiplier(player));
         }
+
+        return null;
     }
 }

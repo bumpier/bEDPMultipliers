@@ -4,14 +4,19 @@ package net.bumpier.bedpmultipliers.managers;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ConfigManager {
 
@@ -26,11 +31,13 @@ public class ConfigManager {
     private boolean bossBarEnabled;
     private BarColor bossBarColor;
     private BarStyle bossBarStyle;
+    private Map<String, String> currencyFormats;
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
         this.configFile = new File(plugin.getDataFolder(), "config.yml");
         this.messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+        // Load all configs immediately on creation for reliability
         loadConfigs();
     }
 
@@ -64,6 +71,23 @@ public class ConfigManager {
             plugin.getLogger().warning("Invalid BossBar style in config.yml. Defaulting to SOLID.");
             this.bossBarStyle = BarStyle.SOLID;
         }
+
+        this.currencyFormats = new HashMap<>();
+        ConfigurationSection currencySection = config.getConfigurationSection("currencies");
+        if (currencySection != null) {
+            for (String key : currencySection.getKeys(false)) {
+                String id = currencySection.getString(key + ".id");
+                String formatted = currencySection.getString(key + ".formatted");
+                if (id != null && !id.isEmpty() && formatted != null) {
+                    currencyFormats.put(id.toLowerCase(), formatColors(formatted));
+                }
+            }
+        }
+    }
+
+    public String getFormattedCurrency(String currencyId) {
+        if (currencyId.equalsIgnoreCase("All")) return "All";
+        return currencyFormats.getOrDefault(currencyId.toLowerCase(), currencyId);
     }
 
     public String getMessage(String path) {
@@ -71,7 +95,13 @@ public class ConfigManager {
         return formatColors(message);
     }
 
-    private String formatColors(String text) {
+    public List<String> getMessageList(String path) {
+        return messagesConfig.getStringList(path).stream()
+                .map(this::formatColors)
+                .collect(Collectors.toList());
+    }
+
+    public String formatColors(String text) {
         Pattern hexPattern = Pattern.compile("&#([A-Fa-f0-9]{6})");
         Matcher matcher = hexPattern.matcher(text);
         while (matcher.find()) {
@@ -80,34 +110,10 @@ public class ConfigManager {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
 
-    public boolean isDebug() {
-        return debug;
-    }
-
-    public double getGlobalMultiplier() {
-        return globalMultiplier;
-    }
-
-    public boolean isBossBarEnabled() {
-        return bossBarEnabled;
-    }
-
-    public BarColor getBossBarColor() {
-        return bossBarColor;
-    }
-
-    public BarStyle getBossBarStyle() {
-        return bossBarStyle;
-    }
-
-    public void setGlobalMultiplier(double multiplier) {
-        this.globalMultiplier = multiplier;
-        config.set("global-multiplier", multiplier);
-        try {
-            config.save(configFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save config.yml!");
-            e.printStackTrace();
-        }
-    }
+    // Getters
+    public boolean isDebug() { return debug; }
+    public double getGlobalMultiplier() { return globalMultiplier; }
+    public boolean isBossBarEnabled() { return bossBarEnabled; }
+    public BarColor getBossBarColor() { return bossBarColor; }
+    public BarStyle getBossBarStyle() { return bossBarStyle; }
 }

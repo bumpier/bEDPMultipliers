@@ -1,23 +1,32 @@
 // File: src/main/java/net/bumpier/bedpmultipliers/commands/BMultiCommand.java
 package net.bumpier.bedpmultipliers.commands;
 
+import net.bumpier.bedpmultipliers.BEDPMultipliers;
 import net.bumpier.bedpmultipliers.managers.ConfigManager;
 import net.bumpier.bedpmultipliers.managers.MultiplierManager;
 import net.bumpier.bedpmultipliers.utils.TimeUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-public class BMultiCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+public class BMultiCommand implements CommandExecutor, TabCompleter {
+
+    private final BEDPMultipliers plugin;
     private final MultiplierManager multiplierManager;
     private final ConfigManager configManager;
 
-    public BMultiCommand(MultiplierManager multiplierManager, ConfigManager configManager) {
+    public BMultiCommand(BEDPMultipliers plugin, MultiplierManager multiplierManager, ConfigManager configManager) {
+        this.plugin = plugin;
         this.multiplierManager = multiplierManager;
         this.configManager = configManager;
     }
@@ -26,6 +35,12 @@ public class BMultiCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             sendUsage(sender);
+            return true;
+        }
+
+        // Handle reload command
+        if (args[0].equalsIgnoreCase("reload")) {
+            handleReload(sender);
             return true;
         }
 
@@ -39,12 +54,23 @@ public class BMultiCommand implements CommandExecutor {
             case "remove":
                 handleRemove(sender, args);
                 break;
-            default: // Handles both "check" and default usage like /bmulti <player>
+            default:
                 handleCheck(sender, args);
                 break;
         }
         return true;
     }
+
+    private void handleReload(CommandSender sender) {
+        if (!sender.hasPermission("bmultipliers.admin")) {
+            sender.sendMessage(configManager.getMessage("no-permission"));
+            return;
+        }
+        plugin.reloadPlugin();
+        sender.sendMessage(configManager.getMessage("reload-success"));
+    }
+
+    // ... (All other handle methods like handleCheck, handleSet, etc. remain unchanged)
 
     private void handleCheck(CommandSender sender, String[] args) {
         if (!sender.hasPermission("bmultipliers.player")) {
@@ -52,25 +78,63 @@ public class BMultiCommand implements CommandExecutor {
             return;
         }
 
-        OfflinePlayer target;
-        String targetName = args.length > 0 ? args[0] : (sender instanceof Player ? sender.getName() : null);
-
-        if (targetName == null) {
-            sender.sendMessage(ChatColor.RED + "Usage: /bmulti <player>");
-            return;
-        }
-
-        target = Bukkit.getOfflinePlayer(targetName);
-
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
         if (!target.hasPlayedBefore() && !target.isOnline()) {
             sender.sendMessage(configManager.getMessage("player-not-found"));
             return;
         }
 
-        double totalMulti = multiplierManager.getTotalMultiplier(target);
-        sender.sendMessage(configManager.getMessage("check-multiplier")
-                .replace("%player%", target.getName())
-                .replace("%multiplier%", String.valueOf(totalMulti)));
+        if (args.length > 1 && args[1].equalsIgnoreCase("list")) {
+            listAllMultipliers(sender, target);
+        } else if (args.length > 1) {
+            String currency = args[1].toLowerCase();
+            double totalMulti = multiplierManager.getTotalMultiplier(target, currency);
+            sender.sendMessage(configManager.getMessage("check-multiplier")
+                    .replace("%player%", target.getName())
+                    .replace("%currency%", configManager.getFormattedCurrency(currency))
+                    .replace("%multiplier%", String.valueOf(totalMulti)));
+        } else {
+            sender.sendMessage(configManager.getMessage("check-specify-currency").replace("%player%", target.getName()));
+        }
+    }
+
+    private void listAllMultipliers(CommandSender sender, OfflinePlayer target) {
+        sender.sendMessage(configManager.getMessage("check-header").replace("%player%", target.getName()));
+        boolean hasMultipliers = false;
+
+        Map<String, Double> permanent = multiplierManager.getAllPlayerPermanentMultipliers(target.getUniqueId());
+        if (!permanent.isEmpty()) {
+            hasMultipliers = true;
+            permanent.forEach((currency, amount) ->
+                    sender.sendMessage(configManager.getMessage("check-line-permanent")
+                            .replace("%currency%", configManager.getFormattedCurrency(currency))
+                            .replace("%amount%", String.valueOf(amount)))
+            );
+        }
+
+        Map<String, Map<String, Object>> temporary = multiplierManager.getAllPlayerTemporaryMultipliers(target.getUniqueId());
+        if (!temporary.isEmpty()) {
+            hasMultipliers = true;
+            temporary.forEach((currency, data) -> {
+                long expiry = (long) data.getOrDefault("expiry", 0L);
+                String timeLeft = TimeUtil.formatDuration(expiry - System.currentTimeMillis());
+                sender.sendMessage(configManager.getMessage("check-line-temporary")
+                        .replace("%currency%", configManager.getFormattedCurrency(currency))
+                        .replace("%amount%", String.valueOf(data.get("amount")))
+                        .replace("%time%", timeLeft));
+            });
+        }
+
+        double rankMulti = multiplierManager.getPermissionMultiplier(target);
+        if (rankMulti > 1.0) {
+            hasMultipliers = true;
+            sender.sendMessage(configManager.getMessage("check-rank").replace("%amount%", String.valueOf(rankMulti)));
+        }
+
+        if (!hasMultipliers) {
+            sender.sendMessage(configManager.getMessage("check-none"));
+        }
+        sender.sendMessage(configManager.getMessage("check-footer"));
     }
 
     private void handleSet(CommandSender sender, String[] args) {
@@ -78,12 +142,10 @@ public class BMultiCommand implements CommandExecutor {
             sender.sendMessage(configManager.getMessage("no-permission"));
             return;
         }
-
         if (args.length < 3) {
-            sender.sendMessage(ChatColor.RED + "Usage: /bmulti set <player/global> <amount>");
+            sender.sendMessage(configManager.getMessage("usage-set"));
             return;
         }
-
         double amount;
         try {
             amount = Double.parseDouble(args[2]);
@@ -91,22 +153,25 @@ public class BMultiCommand implements CommandExecutor {
             sender.sendMessage(configManager.getMessage("invalid-number"));
             return;
         }
-
+        String currency = (args.length > 3) ? args[3].toLowerCase() : multiplierManager.getGlobalCurrencyKey();
+        String currencyDisplay = currency.equals(multiplierManager.getGlobalCurrencyKey()) ? "All" : configManager.getFormattedCurrency(currency);
         String targetName = args[1];
+
         if (targetName.equalsIgnoreCase("global")) {
-            configManager.setGlobalMultiplier(amount);
-            sender.sendMessage(configManager.getMessage("set-global-multiplier").replace("%amount%", String.valueOf(amount)));
-        } else {
-            OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-            if (!target.hasPlayedBefore() && !target.isOnline()) {
-                sender.sendMessage(configManager.getMessage("player-not-found"));
-                return;
-            }
-            multiplierManager.setPlayerMultiplier(target.getUniqueId(), amount);
-            sender.sendMessage(configManager.getMessage("set-player-multiplier")
-                    .replace("%player%", target.getName())
-                    .replace("%amount%", String.valueOf(amount)));
+            sender.sendMessage(configManager.getMessage("error-global-permanent"));
+            return;
         }
+
+        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+        if (!target.hasPlayedBefore() && !target.isOnline()) {
+            sender.sendMessage(configManager.getMessage("player-not-found"));
+            return;
+        }
+        multiplierManager.setPlayerPermanentMultiplier(target.getUniqueId(), currency, amount);
+        sender.sendMessage(configManager.getMessage("set-player-multiplier")
+                .replace("%player%", target.getName())
+                .replace("%currency%", currencyDisplay)
+                .replace("%amount%", String.valueOf(amount)));
     }
 
     private void handleSetTemp(CommandSender sender, String[] args) {
@@ -115,10 +180,9 @@ public class BMultiCommand implements CommandExecutor {
             return;
         }
         if (args.length < 4) {
-            sender.sendMessage(ChatColor.RED + "Usage: /bmulti settemp <player/global> <amount> <time>");
+            sender.sendMessage(configManager.getMessage("usage-settemp"));
             return;
         }
-
         double amount;
         try {
             amount = Double.parseDouble(args[2]);
@@ -126,19 +190,21 @@ public class BMultiCommand implements CommandExecutor {
             sender.sendMessage(configManager.getMessage("invalid-number"));
             return;
         }
-
         long duration = TimeUtil.parseTime(args[3]);
         if (duration <= 0) {
             sender.sendMessage(configManager.getMessage("invalid-time-format"));
             return;
         }
 
-        String targetName = args[1];
+        String currency = (args.length > 4) ? args[4].toLowerCase() : multiplierManager.getGlobalCurrencyKey();
+        String currencyDisplay = currency.equals(multiplierManager.getGlobalCurrencyKey()) ? "All" : configManager.getFormattedCurrency(currency);
         String formattedTime = TimeUtil.formatDuration(duration);
+        String targetName = args[1];
 
         if (targetName.equalsIgnoreCase("global")) {
-            multiplierManager.setGlobalTempMultiplier(amount, duration);
+            multiplierManager.setGlobalTemporaryMultiplier(currency, amount, duration);
             sender.sendMessage(configManager.getMessage("set-global-temp-multiplier")
+                    .replace("%currency%", currencyDisplay)
                     .replace("%amount%", String.valueOf(amount))
                     .replace("%time%", formattedTime));
         } else {
@@ -147,9 +213,10 @@ public class BMultiCommand implements CommandExecutor {
                 sender.sendMessage(configManager.getMessage("player-not-found"));
                 return;
             }
-            multiplierManager.setPlayerTempMultiplier(target.getUniqueId(), amount, duration);
+            multiplierManager.setPlayerTemporaryMultiplier(target.getUniqueId(), currency, amount, duration);
             sender.sendMessage(configManager.getMessage("set-player-temp-multiplier")
                     .replace("%player%", target.getName())
+                    .replace("%currency%", currencyDisplay)
                     .replace("%amount%", String.valueOf(amount))
                     .replace("%time%", formattedTime));
         }
@@ -161,35 +228,53 @@ public class BMultiCommand implements CommandExecutor {
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /bmulti remove <player/global>");
+            sender.sendMessage(configManager.getMessage("usage-remove"));
             return;
         }
-
+        String currency = (args.length > 2) ? args[2].toLowerCase() : multiplierManager.getGlobalCurrencyKey();
+        String currencyDisplay = currency.equals(multiplierManager.getGlobalCurrencyKey()) ? "All" : configManager.getFormattedCurrency(currency);
         String targetName = args[1];
+
         if (targetName.equalsIgnoreCase("global")) {
-            configManager.setGlobalMultiplier(1.0); // Reset permanent global to default
-            multiplierManager.removeGlobalTempMultiplier();
-            sender.sendMessage(configManager.getMessage("remove-global-multiplier"));
+            multiplierManager.removeGlobalTemporaryMultiplier(currency);
+            sender.sendMessage(configManager.getMessage("remove-global-multiplier").replace("%currency%", currencyDisplay));
         } else {
             OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
             if (!target.hasPlayedBefore() && !target.isOnline()) {
                 sender.sendMessage(configManager.getMessage("player-not-found"));
                 return;
             }
-            multiplierManager.removePlayerMultiplier(target.getUniqueId());
-            sender.sendMessage(configManager.getMessage("remove-player-multiplier").replace("%player%", target.getName()));
+            multiplierManager.removePlayerPermanentMultiplier(target.getUniqueId(), currency);
+            multiplierManager.removePlayerTemporaryMultiplier(target.getUniqueId(), currency);
+            sender.sendMessage(configManager.getMessage("remove-player-multiplier")
+                    .replace("%player%", target.getName())
+                    .replace("%currency%", currencyDisplay));
         }
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage(ChatColor.GOLD + "--- bEDPMultipliers Help ---");
-        if (sender.hasPermission("bmultipliers.player")) {
-            sender.sendMessage(ChatColor.YELLOW + "/bmulti <player> - Check a player's multiplier.");
+        configManager.getMessageList("help-message").forEach(sender::sendMessage);
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            List<String> subCommands = new ArrayList<>(List.of("set", "settemp", "remove", "reload"));
+            return Stream.concat(
+                    subCommands.stream(),
+                    Bukkit.getOnlinePlayers().stream().map(Player::getName)
+            ).filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase())).collect(Collectors.toList());
         }
-        if (sender.hasPermission("bmultipliers.admin")) {
-            sender.sendMessage(ChatColor.YELLOW + "/bmulti set <player/global> <amount> - Set a multiplier.");
-            sender.sendMessage(ChatColor.YELLOW + "/bmulti settemp <player/global> <amount> <time> - Set a temporary multiplier (e.g., 1d2h3m).");
-            sender.sendMessage(ChatColor.YELLOW + "/bmulti remove <player/global> - Remove a multiplier.");
+
+        if (args.length == 2) {
+            if (List.of("set", "settemp", "remove").contains(args[0].toLowerCase())) {
+                List<String> completions = Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
+                completions.add("global");
+                return completions.stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
+            } else if (sender.hasPermission("bmultipliers.player") && !args[0].equalsIgnoreCase("reload")) {
+                return List.of("list").stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
+            }
         }
+        return new ArrayList<>();
     }
 }

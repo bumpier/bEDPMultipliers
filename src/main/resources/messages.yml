@@ -7,18 +7,42 @@ player-not-found: "&#FF0000Player not found."
 invalid-number: "&#FF0000That is not a valid number."
 invalid-time-format: "&#FF0000Invalid time format. Use d, h, m, s (e.g., 1d12h)."
 
-check-multiplier: "&#FFFF00%player%'s current total multiplier is &#00FF00%multiplier%x."
+# Command Usage & Errors
+usage-set: "&cUsage: /bmulti set <player> <amount> [currency]"
+usage-settemp: "&cUsage: /bmulti settemp <player/global> <amount> <time> [currency]"
+usage-remove: "&cUsage: /bmulti remove <player/global> [currency]"
+error-global-permanent: "&cError: Global permanent multipliers must be set in config.yml."
 
-set-global-multiplier: "&#00FF00Set the global multiplier to &#FFFF00%amount%x."
-set-player-multiplier: "&#00FF00Set &#FFFF00%player%'s &#00FF00permanent multiplier to &#FFFF00%amount%x."
-set-global-temp-multiplier: "&#00FF00Set the global temporary multiplier to &#FFFF00%amount%x &#00FF00for &#FFFF00%time%."
-set-player-temp-multiplier: "&#00FF00Set &#FFFF00%player%'s &#00FF00temporary multiplier to &#FFFF00%amount%x &#00FF00for &#FFFF00%time%."
+# Help Message for /bmulti
+help-message:
+  - "&6&m------------------[ &e&lbEDPMultipliers &6&m]------------------"
+  - "&e/bmulti <player> <currency> &7- Check a player's multiplier for a currency."
+  - "&e/bmulti <player> list &7- List all of a player's multipliers."
+  - "&c/bmulti set <player> <amount> [currency] &7- Set a permanent multiplier."
+  - "&c/bmulti settemp <player/global> <amount> <time> [currency] &7- Set a temporary multiplier."
+  - "&c/bmulti remove <player/global> [currency] &7- Remove multipliers."
+  - "&6&m----------------------------------------------------"
 
-remove-global-multiplier: "&#00FF00Removed the global multipliers."
-remove-player-multiplier: "&#00FF00Removed all multipliers for &#FFFF00%player%."
 
-# BossBar Messages
-# %amount% - The multiplier amount (e.g., 2.0)
-# %time% - The formatted time remaining (e.g., 5m 30s)
-bossbar-personal-text: "&aPersonal Multiplier: &e%amount%x &afor &e%time%"
-bossbar-global-text: "&aGlobal Multiplier: &e%amount%x &afor &e%time%"
+# Messages for the check/list functionality
+check-multiplier: "&#FFFF00%player%'s total multiplier for &#EEDD82%currency% &#FFFF00is &#00FF00%multiplier%x."
+check-specify-currency: "&cPlease specify a currency or use /bmulti %player% list to see all multipliers."
+check-header: "&6&m----------------[ &eMultipliers for %player% &6&m]----------------"
+check-line-permanent: " &8- &fPermanent (&b%currency%&f): &a%amount%x"
+check-line-temporary: " &8- &fTemporary (&b%currency%&f): &a%amount%x &7(%time% left)"
+check-rank: " &8- &fRank Multiplier (&bAll&f): &a%amount%x"
+check-none: "&cThis player has no active multipliers."
+check-footer: "&6&m----------------------------------------------------"
+
+# Set/Remove confirmation messages
+set-player-multiplier: "&#00FF00Set &#FFFF00%player%'s &#00FF00permanent multiplier for &#FFFF00%currency% &#00FF00to &#FFFF00%amount%x."
+set-global-temp-multiplier: "&#00FF00Set the global temporary multiplier for &#FFFF00%currency% &#00FF00to &#FFFF00%amount%x &#00FF00for &#FFFF00%time%."
+set-player-temp-multiplier: "&#00FF00Set &#FFFF00%player%'s &#00FF00temporary multiplier for &#FFFF00%currency% &#00FF00to &#FFFF00%amount%x &#00FF00for &#FFFF00%time%."
+remove-global-multiplier: "&#00FF00Removed the global temporary multiplier for &#FFFF00%currency%."
+remove-player-multiplier: "&#00FF00Removed &#FFFF00%player%'s &#00FF00multipliers for &#FFFF00%currency%."
+
+# Reload Message
+reload-success: "&a&lSuccess! &abEDPMultipliers configuration and messages have been reloaded."
+
+# BossBar Message
+bossbar-text: "&a%currency% Multiplier: &e%amount%x &afor &e%time%"

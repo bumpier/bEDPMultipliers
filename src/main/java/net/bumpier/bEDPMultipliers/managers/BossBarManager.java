@@ -18,7 +18,6 @@ public class BossBarManager {
     private final JavaPlugin plugin;
     private final net.bumpier.bedpmultipliers.managers.ConfigManager configManager;
     private final net.bumpier.bedpmultipliers.managers.MultiplierManager multiplierManager;
-
     private final Map<UUID, BossBar> activeBossBars = new ConcurrentHashMap<>();
     private BukkitTask updateTask;
 
@@ -30,7 +29,6 @@ public class BossBarManager {
 
     public void initialize() {
         if (!configManager.isBossBarEnabled()) return;
-
         this.updateTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -45,12 +43,7 @@ public class BossBarManager {
         if (updateTask != null) {
             updateTask.cancel();
         }
-        for (UUID uuid : activeBossBars.keySet()) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-                removeBossBar(player);
-            }
-        }
+        Bukkit.getOnlinePlayers().forEach(this::removeBossBar);
         activeBossBars.clear();
     }
 
@@ -59,55 +52,49 @@ public class BossBarManager {
             removeBossBar(player);
             return;
         }
-
-        UUID uuid = player.getUniqueId();
-        long personalExpiry = multiplierManager.getPlayerTempExpiry(uuid);
-        long globalExpiry = multiplierManager.getGlobalTempExpiry();
-
-        if (personalExpiry > System.currentTimeMillis()) {
-            double amount = multiplierManager.getPlayerTempMultiplier(uuid);
-            long totalDuration = multiplierManager.getPlayerTempDuration(uuid);
-            createOrUpdateBar(player, personalExpiry, totalDuration, amount, false);
-        } else if (globalExpiry > System.currentTimeMillis()) {
-            double amount = multiplierManager.getGlobalTempMultiplier();
-            long totalDuration = multiplierManager.getGlobalTempDuration();
-            createOrUpdateBar(player, globalExpiry, totalDuration, amount, true);
+        Map<String, Object> displayData = multiplierManager.getBossBarDisplayData(player.getUniqueId());
+        if (displayData != null) {
+            createOrUpdateBar(player, displayData);
         } else {
             removeBossBar(player);
         }
     }
 
-    private void createOrUpdateBar(Player player, long expiryTime, long totalDuration, double amount, boolean isGlobal) {
+    private void createOrUpdateBar(Player player, Map<String, Object> data) {
         BossBar bar = activeBossBars.computeIfAbsent(player.getUniqueId(), k -> {
             BossBar newBar = Bukkit.createBossBar("", configManager.getBossBarColor(), configManager.getBossBarStyle());
             newBar.addPlayer(player);
             return newBar;
         });
-
+        long expiryTime = (long) data.getOrDefault("expiry", 0L);
         long remainingMillis = expiryTime - System.currentTimeMillis();
         if (remainingMillis <= 0) {
             removeBossBar(player);
             return;
         }
+        long totalDuration = (long) data.getOrDefault("duration", 0L);
+        double amount = (double) data.getOrDefault("amount", 1.0);
+        String currencyKey = (String) data.getOrDefault("currency", "Unknown");
+        // Use the new formatted currency name, fallback to "Global" for the global key
+        String currencyDisplay = currencyKey.equals(multiplierManager.getGlobalCurrencyKey()) ? "Global" : configManager.getFormattedCurrency(currencyKey);
 
-        double progress = Math.max(0, (double) remainingMillis / totalDuration);
+        double progress = (totalDuration > 0) ? Math.max(0, (double) remainingMillis / totalDuration) : 1.0;
         String time = TimeUtil.formatDuration(remainingMillis);
 
-        String titleKey = isGlobal ? "bossbar-global-text" : "bossbar-personal-text";
-        String title = configManager.getMessage(titleKey)
+        String title = configManager.getMessage("bossbar-text")
+                .replace("%currency%", currencyDisplay)
                 .replace("%amount%", String.valueOf(amount))
                 .replace("%time%", time);
 
         bar.setProgress(progress);
         bar.setTitle(title);
-        if (!bar.isVisible()) {
-            bar.setVisible(true);
-        }
+        bar.setVisible(true);
     }
 
     public void removeBossBar(Player player) {
         BossBar bar = activeBossBars.remove(player.getUniqueId());
         if (bar != null) {
+            bar.setVisible(false);
             bar.removeAll();
         }
     }

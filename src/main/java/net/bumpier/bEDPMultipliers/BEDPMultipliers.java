@@ -17,9 +17,9 @@ import java.util.Objects;
 public final class BEDPMultipliers extends JavaPlugin {
 
     private ConfigManager configManager;
-    private MultiplierManager multiplierManager;
     private BossBarManager bossBarManager;
     private DebugLogger debugLogger;
+    private MultiplierManager multiplierManager;
 
     @Override
     public void onEnable() {
@@ -29,6 +29,7 @@ public final class BEDPMultipliers extends JavaPlugin {
             return;
         }
 
+        // Simplified and more robust initialization order
         this.configManager = new ConfigManager(this);
         this.debugLogger = new DebugLogger(configManager);
         this.multiplierManager = new MultiplierManager(this, configManager, debugLogger);
@@ -36,8 +37,12 @@ public final class BEDPMultipliers extends JavaPlugin {
 
         bossBarManager.initialize();
 
-        registerCommands();
-        registerListeners();
+        BMultiCommand commandExecutor = new BMultiCommand(this, multiplierManager, configManager);
+        Objects.requireNonNull(getCommand("bmulti")).setExecutor(commandExecutor);
+        Objects.requireNonNull(getCommand("bmulti")).setTabCompleter(commandExecutor);
+
+        getServer().getPluginManager().registerEvents(new MultiplierListener(multiplierManager, debugLogger), this);
+        getServer().getPluginManager().registerEvents(new PlayerConnectionListener(bossBarManager), this);
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new MultiplierPlaceholders(this, multiplierManager).register();
@@ -47,6 +52,14 @@ public final class BEDPMultipliers extends JavaPlugin {
         }
 
         debugLogger.log("bEDPMultipliers has been enabled successfully.");
+    }
+
+    public void reloadPlugin() {
+        debugLogger.log("Reloading plugin configurations...");
+        configManager.loadConfigs();
+        bossBarManager.shutdown();
+        bossBarManager.initialize();
+        debugLogger.log("Plugin configurations reloaded.");
     }
 
     @Override
@@ -60,16 +73,5 @@ public final class BEDPMultipliers extends JavaPlugin {
         if (debugLogger != null) {
             debugLogger.log("bEDPMultipliers has been disabled.");
         }
-    }
-
-    private void registerCommands() {
-        Objects.requireNonNull(getCommand("bmulti")).setExecutor(new BMultiCommand(multiplierManager, configManager));
-        debugLogger.log("Commands registered.");
-    }
-
-    private void registerListeners() {
-        getServer().getPluginManager().registerEvents(new MultiplierListener(multiplierManager, debugLogger), this);
-        getServer().getPluginManager().registerEvents(new PlayerConnectionListener(bossBarManager), this);
-        debugLogger.log("Listeners registered.");
     }
 }

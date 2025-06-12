@@ -25,13 +25,19 @@ public class MultiplierListener implements Listener {
         OfflinePlayer player = Bukkit.getOfflinePlayer(event.getUUID());
         if (player == null) return;
 
-        double pluginMultiplier = multiplierManager.getTotalMultiplier(player);
+        String currency = event.getCurrency();
+        if (currency == null || currency.isEmpty()) {
+            debugLogger.log("Event currency is null or empty, skipping multiplier check.");
+            return;
+        }
+
+        double pluginMultiplier = multiplierManager.getTotalMultiplier(player, currency.toLowerCase());
 
         double bonus = pluginMultiplier - 1.0;
 
         if (bonus > 0) {
             event.addMultiplier(bonus);
-            debugLogger.log("Applied a " + bonus + "x bonus multiplier to " + player.getName());
+            debugLogger.log("Applied a " + bonus + "x bonus multiplier to " + player.getName() + " for currency '" + currency + "'");
         }
     }
 }
