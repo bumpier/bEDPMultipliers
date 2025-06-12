@@ -2,8 +2,8 @@
 .idea/
 /libs/
 /src/
-.gitignore
-pom.xml
+
+*.xml
 
 *.iml
 *.ipr
