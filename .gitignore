@@ -1,7 +1,9 @@
 # User-specific stuff
 .idea/
 /libs/
-
+/src/
+.gitignore
+pom.xml
 
 *.iml
 *.ipr
