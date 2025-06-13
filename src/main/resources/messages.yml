@@ -48,3 +48,8 @@ reload-success: "&aConfiguration and messages have been reloaded successfully."
 
 # BossBar Message
 bossbar-text: "&a%currency% Multiplier: &e%amount%x &afor &e%time%"
+
+# Voucher Messages
+usage-voucher: "&cUsage: /bmulti voucher <player> <amount> <time> <currency>"
+voucher-created: "&aSuccessfully created and gave a %multiplier%x voucher to %player%."
+voucher-redeemed: "&aYou have redeemed a %multiplier%x multiplier for %currency% that will last for %time%."

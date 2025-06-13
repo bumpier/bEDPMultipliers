@@ -4,6 +4,7 @@ package net.bumpier.bedpmultipliers.commands;
 import net.bumpier.bedpmultipliers.BEDPMultipliers;
 import net.bumpier.bedpmultipliers.managers.ConfigManager;
 import net.bumpier.bedpmultipliers.managers.MultiplierManager;
+import net.bumpier.bedpmultipliers.managers.VoucherManager;
 import net.bumpier.bedpmultipliers.utils.TimeUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -23,11 +24,13 @@ public final class BMultiCommand implements TabExecutor {
     private final BEDPMultipliers plugin;
     private final MultiplierManager multiplierManager;
     private final ConfigManager configManager;
+    private final VoucherManager voucherManager;
 
-    public BMultiCommand(BEDPMultipliers plugin, MultiplierManager multiplierManager, ConfigManager configManager) {
+    public BMultiCommand(BEDPMultipliers plugin, MultiplierManager multiplierManager, ConfigManager configManager, VoucherManager voucherManager) {
         this.plugin = plugin;
         this.multiplierManager = multiplierManager;
         this.configManager = configManager;
+        this.voucherManager = voucherManager;
     }
 
     @Override
@@ -39,12 +42,9 @@ public final class BMultiCommand implements TabExecutor {
 
         String subCommand = args[0].toLowerCase();
 
-        if ("reload".equals(subCommand)) {
-            handleReload(sender);
-            return true;
-        }
-
         switch (subCommand) {
+            case "reload" -> handleReload(sender);
+            case "voucher" -> handleVoucher(sender, args);
             case "set" -> handleSet(sender, args);
             case "settemp" -> handleSetTemp(sender, args);
             case "remove" -> handleRemove(sender, args);
@@ -56,7 +56,7 @@ public final class BMultiCommand implements TabExecutor {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            List<String> subCommands = new ArrayList<>(List.of("set", "settemp", "remove", "reload"));
+            List<String> subCommands = new ArrayList<>(List.of("set", "settemp", "remove", "reload", "voucher"));
             return Stream.concat(
                     subCommands.stream(),
                     Bukkit.getOnlinePlayers().stream().map(Player::getName)
@@ -64,11 +64,16 @@ public final class BMultiCommand implements TabExecutor {
         }
 
         if (args.length == 2) {
-            if (List.of("set", "settemp", "remove").contains(args[0].toLowerCase())) {
+            // Suggest players/global for admin commands
+            if (List.of("set", "settemp", "remove", "voucher").contains(args[0].toLowerCase())) {
                 List<String> completions = Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
-                completions.add("global");
+                if (!args[0].equalsIgnoreCase("voucher")) {
+                    completions.add("global");
+                }
                 return completions.stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
-            } else if (sender.hasPermission("bmultipliers.player") && !args[0].equalsIgnoreCase("reload")) {
+            }
+            // Suggest 'list' after a player name
+            else if (sender.hasPermission("bmultipliers.player")) {
                 return List.of("list").stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
             }
         }
@@ -86,6 +91,47 @@ public final class BMultiCommand implements TabExecutor {
         }
         plugin.reloadPlugin();
         sender.sendMessage(configManager.getMessage("reload-success"));
+    }
+
+    private void handleVoucher(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bmultipliers.admin")) {
+            sender.sendMessage(configManager.getMessage("no-permission"));
+            return;
+        }
+        // Usage: /bmulti voucher <player> <amount> <time> <currency>
+        if (args.length < 5) {
+            sender.sendMessage(configManager.getMessage("usage-voucher"));
+            return;
+        }
+
+        Player target = Bukkit.getPlayer(args[1]);
+        if (target == null) {
+            sender.sendMessage(configManager.getMessage("player-not-found"));
+            return;
+        }
+
+        double amount;
+        try {
+            amount = Double.parseDouble(args[2]);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(configManager.getMessage("invalid-number"));
+            return;
+        }
+
+        long duration = TimeUtil.parseTime(args[3]);
+        if (duration <= 0) {
+            sender.sendMessage(configManager.getMessage("invalid-time-format"));
+            return;
+        }
+
+        String currency = args[4].toLowerCase();
+
+        voucherManager.createVoucher(target, amount, duration, TimeUtil.formatDuration(duration), currency);
+
+        sender.sendMessage(configManager.getMessage("voucher-created")
+                .replace("%player%", target.getName())
+                .replace("%multiplier%", String.valueOf(amount))
+        );
     }
 
     private void handleCheck(CommandSender sender, String[] args) {
