@@ -35,7 +35,7 @@ public final class ConfigManager {
     private BarColor bossBarColor;
     private BarStyle bossBarStyle;
     private Map<String, String> currencyFormats;
-    private String pluginPrefix; // New field for the prefix
+    private String pluginPrefix;
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -58,9 +58,7 @@ public final class ConfigManager {
     }
 
     private void loadValues() {
-        // Load plugin prefix from messages.yml
         this.pluginPrefix = messagesConfig.getString("plugin-prefix", "&8[&6Multipliers&8] &r");
-
         this.debug = config.getBoolean("debug", false);
         this.globalMultiplier = config.getDouble("global-multiplier", 1.0);
         this.bossBarEnabled = config.getBoolean("bossbar.enabled", true);
@@ -90,11 +88,21 @@ public final class ConfigManager {
         }
     }
 
-    /**
-     * Gets a single message from messages.yml and prepends the plugin prefix.
-     * @param path The path to the message.
-     * @return The formatted and prefixed message.
-     */
+    // Note: This is the new helper method to capitalize the first letter of a word.
+    private String capitalize(String word) {
+        if (word == null || word.isEmpty()) {
+            return word;
+        }
+        return word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase();
+    }
+
+    // Note: This method now uses the capitalize method as a fallback.
+    public String getFormattedCurrency(String currencyId) {
+        if (currencyId.equalsIgnoreCase("All")) return "All";
+        // If a formatted name exists in the config, use it. Otherwise, capitalize the ID.
+        return currencyFormats.getOrDefault(currencyId.toLowerCase(), capitalize(currencyId));
+    }
+
     public String getMessage(String path) {
         String message = messagesConfig.getString(path, "&cMessage not found: " + path);
         if (message.isEmpty()) {
@@ -118,16 +126,9 @@ public final class ConfigManager {
     }
 
     // Getters
-    public String getFormattedCurrency(String currencyId) {
-        if (currencyId.equalsIgnoreCase("All")) return "All";
-        return currencyFormats.getOrDefault(currencyId.toLowerCase(), currencyId);
-    }
     public boolean isDebug() { return debug; }
     public double getGlobalMultiplier() { return globalMultiplier; }
     public boolean isBossBarEnabled() { return bossBarEnabled; }
     public BarColor getBossBarColor() { return bossBarColor; }
     public BarStyle getBossBarStyle() { return bossBarStyle; }
-    public String getStorageString(String path, String def) { return config.getString(path, def); }
-    public int getStorageInt(String path, int def) { return config.getInt(path, def); }
-    public boolean isStorageSslEnabled() { return config.getBoolean("storage.mysql.ssl", false); }
 }
