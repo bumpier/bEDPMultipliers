@@ -88,7 +88,6 @@ public final class ConfigManager {
         }
     }
 
-    // Note: This is the new helper method to capitalize the first letter of a word.
     private String capitalize(String word) {
         if (word == null || word.isEmpty()) {
             return word;
@@ -96,7 +95,6 @@ public final class ConfigManager {
         return word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase();
     }
 
-    // Note: This method now uses the capitalize method as a fallback.
     public String getFormattedCurrency(String currencyId) {
         if (currencyId.equalsIgnoreCase("All")) return "All";
         // If a formatted name exists in the config, use it. Otherwise, capitalize the ID.

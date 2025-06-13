@@ -197,17 +197,21 @@ public final class MultiplierManager {
 
     public double getPermissionMultiplier(OfflinePlayer player) {
         if (!player.isOnline() || player.getPlayer() == null) return 1.0;
-        return player.getPlayer().getEffectivePermissions().stream()
-                .map(PermissionAttachmentInfo::getPermission)
-                .filter(p -> p.startsWith("bmultipliers.multi."))
-                .mapToDouble(p -> {
-                    try {
-                        return Double.parseDouble(p.substring("bmultipliers.multi.".length()));
-                    } catch (NumberFormatException e) {
-                        return 0.0;
+
+        double highestPermMulti = 0;
+        for (PermissionAttachmentInfo p : player.getPlayer().getEffectivePermissions()) {
+            String perm = p.getPermission();
+            if (perm.startsWith("bmultipliers.multi.")) {
+                try {
+                    double multi = Double.parseDouble(perm.substring("bmultipliers.multi.".length()));
+                    if (multi > highestPermMulti) {
+                        highestPermMulti = multi;
                     }
-                })
-                .max().orElse(1.0);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return highestPermMulti > 0 ? highestPermMulti : 1.0;
     }
 
     public double getGlobalTotalMultiplier(OfflinePlayer player) {
