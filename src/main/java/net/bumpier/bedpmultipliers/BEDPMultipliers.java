@@ -25,7 +25,7 @@ public final class BEDPMultipliers extends JavaPlugin {
     @Override
     public void onEnable() {
         if (getServer().getPluginManager().getPlugin("EdPrison") == null) {
-            getLogger().severe("EdPrison not found! Disabling bedpmultipliers.");
+            getLogger().severe("EdPrison not found! Disabling bEDPMultipliers.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -58,7 +58,7 @@ public final class BEDPMultipliers extends JavaPlugin {
         }
 
         startDataSaveTask();
-        debugLogger.log("bedpmultipliers has been enabled successfully.");
+        debugLogger.log("bEDPMultipliers has been enabled successfully.");
     }
 
     @Override
@@ -81,7 +81,7 @@ public final class BEDPMultipliers extends JavaPlugin {
             multiplierManager.saveData(true);
         }
         startDataSaveTask();
-        getLogger().info("bedpmultipliers has been reloaded.");
+        getLogger().info("bEDPMultipliers has been reloaded.");
     }
 
     private void startDataSaveTask() {

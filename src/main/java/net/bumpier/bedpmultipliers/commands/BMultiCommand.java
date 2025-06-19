@@ -91,7 +91,11 @@ public final class BMultiCommand implements TabExecutor {
             sender.sendMessage(configManager.getMessage("no-permission"));
             return;
         }
-        storageManager.openStorageGUI(player);
+        // Initialize preferences if not set, this ensures they have a default value on first open.
+        storageManager.getPlayerSort(player.getUniqueId());
+        storageManager.getPlayerCurrencyFilter(player.getUniqueId());
+
+        storageManager.openStorageGUI(player, 1);
     }
 
     private void sendUsage(CommandSender sender) {
