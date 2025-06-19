@@ -8,7 +8,6 @@ import net.bumpier.bedpmultipliers.data.PluginData;
 import net.bumpier.bedpmultipliers.data.TemporaryMultiplier;
 import net.bumpier.bedpmultipliers.utils.DebugLogger;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -48,14 +47,18 @@ public final class MultiplierManager {
                 if (this.data == null) {
                     this.data = new PluginData();
                 }
-                debugLogger.log("Loaded data from data.json");
+                if (configManager.isDebug()) {
+                    debugLogger.log("Loaded data from data.json");
+                }
             } catch (IOException e) {
                 plugin.getLogger().severe("Could not read data.json! " + e.getMessage());
                 this.data = new PluginData();
             }
         } else {
             this.data = new PluginData();
-            debugLogger.log("No existing data file found. Created new data object.");
+            if (configManager.isDebug()) {
+                debugLogger.log("No existing data file found. Created new data object.");
+            }
         }
     }
 
@@ -66,36 +69,43 @@ public final class MultiplierManager {
         try (FileWriter writer = new FileWriter(dataFile)) {
             gson.toJson(data, writer);
             dirty = false;
-            debugLogger.log("Data saved to data.json");
+            if (configManager.isDebug()) {
+                debugLogger.log("Data saved to data.json");
+            }
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save data.json! " + e.getMessage());
         }
     }
 
+    public void setDirty() {
+        this.dirty = true;
+    }
+
+    public PlayerData getPlayerData(UUID uuid) {
+        return data.getPlayers().computeIfAbsent(uuid, k -> new PlayerData());
+    }
+
+
     // --- Setters ---
 
     public void setPlayerPermanentMultiplier(UUID uuid, String currency, double amount) {
-        data.getPlayers().computeIfAbsent(uuid, k -> new PlayerData())
-                .getPermanent().put(currency, amount);
+        getPlayerData(uuid).getPermanent().put(currency, amount);
         dirty = true;
     }
 
     public void removePlayerPermanentMultiplier(UUID uuid, String currency) {
-        Optional.ofNullable(data.getPlayers().get(uuid))
-                .ifPresent(pd -> pd.getPermanent().remove(currency));
+        getPlayerData(uuid).getPermanent().remove(currency);
         dirty = true;
     }
 
     public void setPlayerTemporaryMultiplier(UUID uuid, String currency, double amount, long duration) {
         TemporaryMultiplier tempMulti = new TemporaryMultiplier(amount, duration, System.currentTimeMillis() + duration, System.currentTimeMillis());
-        data.getPlayers().computeIfAbsent(uuid, k -> new PlayerData())
-                .getTemporary().put(currency, tempMulti);
+        getPlayerData(uuid).getTemporary().put(currency, tempMulti);
         dirty = true;
     }
 
     public void removePlayerTemporaryMultiplier(UUID uuid, String currency) {
-        Optional.ofNullable(data.getPlayers().get(uuid))
-                .ifPresent(pd -> pd.getTemporary().remove(currency));
+        getPlayerData(uuid).getTemporary().remove(currency);
         dirty = true;
     }
 
@@ -128,20 +138,17 @@ public final class MultiplierManager {
     }
 
     public double getPlayerPermanentMultiplier(UUID uuid, String currency) {
-        return Optional.ofNullable(data.getPlayers().get(uuid))
-                .map(pd -> pd.getPermanent().getOrDefault(currency, pd.getPermanent().getOrDefault(GLOBAL_CURRENCY_KEY, 1.0)))
-                .orElse(1.0);
+        PlayerData pd = getPlayerData(uuid);
+        return pd.getPermanent().getOrDefault(currency, pd.getPermanent().getOrDefault(GLOBAL_CURRENCY_KEY, 1.0));
     }
 
     public double getPlayerTemporaryMultiplier(UUID uuid, String currency) {
-        return Optional.ofNullable(data.getPlayers().get(uuid))
-                .map(playerData -> {
-                    TemporaryMultiplier specific = playerData.getTemporary().get(currency);
-                    if (specific != null && specific.isActive()) return specific.getAmount();
-                    TemporaryMultiplier global = playerData.getTemporary().get(GLOBAL_CURRENCY_KEY);
-                    if (global != null && global.isActive()) return global.getAmount();
-                    return 1.0;
-                }).orElse(1.0);
+        PlayerData playerData = getPlayerData(uuid);
+        TemporaryMultiplier specific = playerData.getTemporary().get(currency);
+        if (specific != null && specific.isActive()) return specific.getAmount();
+        TemporaryMultiplier global = playerData.getTemporary().get(GLOBAL_CURRENCY_KEY);
+        if (global != null && global.isActive()) return global.getAmount();
+        return 1.0;
     }
 
     public double getGlobalTemporaryMultiplier(String currency) {
@@ -153,36 +160,31 @@ public final class MultiplierManager {
     }
 
     public Map<String, Double> getAllPlayerPermanentMultipliers(UUID uuid) {
-        return Optional.ofNullable(data.getPlayers().get(uuid))
-                .map(pd -> pd.getPermanent().entrySet().stream().collect(Collectors.toMap(
-                        entry -> entry.getKey().equals(GLOBAL_CURRENCY_KEY) ? "All" : entry.getKey(),
-                        Map.Entry::getValue
-                )))
-                .orElse(Collections.emptyMap());
+        return getPlayerData(uuid).getPermanent().entrySet().stream().collect(Collectors.toMap(
+                entry -> entry.getKey().equals(GLOBAL_CURRENCY_KEY) ? "All" : configManager.getFormattedCurrency(entry.getKey()),
+                Map.Entry::getValue
+        ));
     }
 
     public Map<String, Map<String, Object>> getAllPlayerTemporaryMultipliers(UUID uuid) {
-        return Optional.ofNullable(data.getPlayers().get(uuid))
-                .map(pd -> pd.getTemporary().entrySet().stream()
-                        .filter(entry -> entry.getValue().isActive())
-                        .collect(Collectors.toMap(
-                                entry -> entry.getKey().equals(GLOBAL_CURRENCY_KEY) ? "All" : entry.getKey(),
-                                entry -> toMap(entry.getValue())
-                        )))
-                .orElse(Collections.emptyMap());
+        return getPlayerData(uuid).getTemporary().entrySet().stream()
+                .filter(entry -> entry.getValue().isActive())
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().equals(GLOBAL_CURRENCY_KEY) ? "All" : configManager.getFormattedCurrency(entry.getKey()),
+                        entry -> toMap(entry.getValue())
+                ));
     }
 
     public Map<String, Object> getBossBarDisplayData(UUID uuid) {
         List<Map<String, Object>> activeMultipliers = new ArrayList<>();
-        Optional.ofNullable(data.getPlayers().get(uuid)).ifPresent(playerData ->
-                playerData.getTemporary().forEach((currency, multi) -> {
-                    if (multi.isActive()) {
-                        Map<String, Object> map = toMap(multi);
-                        map.put("currency", currency);
-                        activeMultipliers.add(map);
-                    }
-                })
-        );
+        getPlayerData(uuid).getTemporary().forEach((currency, multi) -> {
+            if (multi.isActive()) {
+                Map<String, Object> map = toMap(multi);
+                map.put("currency", currency);
+                activeMultipliers.add(map);
+            }
+        });
+
         data.getGlobal().getTemporary().forEach((currency, multi) -> {
             if (multi.isActive()) {
                 Map<String, Object> map = toMap(multi);
@@ -214,10 +216,18 @@ public final class MultiplierManager {
         return highestPermMulti > 0 ? highestPermMulti : 1.0;
     }
 
+    /**
+     * [RE-ADDED] This method was re-added to fix a compilation error.
+     * It is used by PlaceholderAPI to get the total multiplier for the global currency.
+     */
     public double getGlobalTotalMultiplier(OfflinePlayer player) {
         return getTotalMultiplier(player, GLOBAL_CURRENCY_KEY);
     }
 
+    /**
+     * [RE-ADDED] This method was re-added to fix a compilation error.
+     * It is used by PlaceholderAPI to get the most significant active temporary multiplier.
+     */
     public double getGlobalActiveTempMultiplier(OfflinePlayer player) {
         double playerTemp = getPlayerTemporaryMultiplier(player.getUniqueId(), GLOBAL_CURRENCY_KEY);
         double globalTemp = getGlobalTemporaryMultiplier(GLOBAL_CURRENCY_KEY);

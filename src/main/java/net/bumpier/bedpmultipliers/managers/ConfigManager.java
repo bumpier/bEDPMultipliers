@@ -1,7 +1,6 @@
 // File: src/main/java/net/bumpier/bedpmultipliers/managers/ConfigManager.java
 package net.bumpier.bedpmultipliers.managers;
 
-import net.bumpier.bedpmultipliers.utils.DebugLogger;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -11,7 +10,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +95,6 @@ public final class ConfigManager {
 
     public String getFormattedCurrency(String currencyId) {
         if (currencyId.equalsIgnoreCase("All")) return "All";
-        // If a formatted name exists in the config, use it. Otherwise, capitalize the ID.
         return currencyFormats.getOrDefault(currencyId.toLowerCase(), capitalize(currencyId));
     }
 
@@ -116,12 +113,21 @@ public final class ConfigManager {
     }
 
     public String formatColors(String text) {
+        if (text == null) return "";
         Matcher matcher = HEX_PATTERN.matcher(text);
+        StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
-            text = text.replace(matcher.group(), ChatColor.of("#" + matcher.group(1)).toString());
+            matcher.appendReplacement(sb, ChatColor.of("#" + matcher.group(1)).toString());
         }
-        return ChatColor.translateAlternateColorCodes('&', text);
+        matcher.appendTail(sb);
+        return ChatColor.translateAlternateColorCodes('&', sb.toString());
     }
+
+    // Getters for voucher settings from messages.yml
+    public String getVoucherMaterial() { return messagesConfig.getString("voucher-material", "PAPER"); }
+    public String getVoucherName() { return messagesConfig.getString("voucher-name"); }
+    public List<String> getVoucherLore() { return messagesConfig.getStringList("voucher-lore"); }
+
 
     // Getters
     public boolean isDebug() { return debug; }

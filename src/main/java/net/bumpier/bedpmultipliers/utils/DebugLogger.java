@@ -13,7 +13,7 @@ public class DebugLogger {
 
     public void log(String message) {
         if (configManager.isDebug()) {
-            Bukkit.getLogger().info("[bEDPMultipliers][DEBUG] " + message);
+            Bukkit.getLogger().info("[bedpmultipliers][DEBUG] " + message);
         }
     }
 }

@@ -1,55 +1,56 @@
 # File: src/main/resources/messages.yml
-
-# The prefix that will be added to the beginning of every message (except for multi-line lists like help).
-plugin-prefix: "&6&lMultipliers &8» &r"
-
-# All other messages remain below...
-no-permission: "&cYou do not have permission to do that."
+plugin-prefix: "&8&l[&6&lMULTIPLIERS&8&l] &r"
+no-permission: "&cYou do not have permission to use this command."
 player-not-found: "&cPlayer not found."
-invalid-number: "&cThat is not a valid number."
-invalid-time-format: "&cInvalid time format. Use d, h, m, s (e.g., 1d12h)."
+invalid-number: "&cInvalid number specified."
+invalid-time-format: "&cInvalid time format. Use s, m, h, d (e.g., 1d2h3m)."
+reload-success: "&aPlugin reloaded successfully."
 
-# Command Usage & Errors
+# Voucher Messages
+voucher-material: "PAPER"
+voucher-name: "&6&lMultiplier Voucher &7(&ax%multiplier%&7)"
+voucher-lore:
+  - "&7This voucher grants a &ax%multiplier% &7multiplier"
+  - "&7for &e%currency% &7gains for &b%time%&7."
+  - ""
+  - "&eRight-click to redeem!"
+voucher-stored: "&aA &e%multiplier%x &avoucher for &e%currency% &afor &e%time% &ahas been added to your /multi storage."
+voucher-withdrawn: "&aYou have withdrawn the multiplier voucher from storage."
+multiplier-applied-storage: "&aSuccessfully applied a &e%multiplier%x %currency% &amultiplier for &e%time%&a."
+
+# Check Messages
+check-header: "&6--- Multipliers for &e%player% &6---"
+check-line-permanent: "&7- &aPermanent &e%currency%&7: &ax%amount%"
+check-line-temporary: "&7- &bTemporary &e%currency%&7: &ax%amount% &7(&f%time% left&7)"
+check-rank: "&7- &dRank Multiplier&7: &ax%amount%"
+check-none: "&cNo active multipliers."
+check-footer: "&6---------------------------"
+check-specify-currency: "&cPlease specify a currency to check for %player% (e.g., /bmulti %player% <currency>)"
+check-multiplier: "&7Total &e%currency% &7multiplier for &e%player%&7: &a%multiplier%x"
+
+# Admin Command Messages
 usage-set: "&cUsage: /bmulti set <player> <amount> [currency]"
-usage-settemp: "&cUsage: /bmulti settemp <player/global> <amount> <time> [currency]"
-usage-remove: "&cUsage: /bmulti remove <player/global> [currency]"
-error-global-permanent: "&cError: Global permanent multipliers must be set in config.yml."
+usage-settemp: "&cUsage: /bmulti settemp <player|global> <amount> <time> [currency]"
+usage-remove: "&cUsage: /bmulti remove <player|global> [currency]"
+usage-voucher: "&cUsage: /bmulti voucher <player> <amount> <time> <currency>"
 
-# Help Message for /bmulti (This list will not be prefixed on each line)
-help-message:
-  - "&6&m------------------[ &e&lbEDPMultipliers &6&m]------------------"
-  - "&e/bmulti <player> <currency> &7- Check a player's multiplier for a currency."
-  - "&e/bmulti <player> list &7- List all of a player's multipliers."
-  - "&c/bmulti set <player> <amount> [currency] &7- Set a permanent multiplier."
-  - "&c/bmulti settemp <player/global> <amount> <time> [currency] &7- Set a temporary multiplier."
-  - "&c/bmulti remove <player/global> [currency] &7- Remove multipliers."
-  - "&c/bmulti reload &7- Reloads the plugin configuration."
-  - "&6&m----------------------------------------------------"
-
-# Messages for the check/list functionality
-check-multiplier: "&e%player%'s total multiplier for &f%currency% &eis &a%multiplier%x."
-check-specify-currency: "&cPlease specify a currency or use /bmulti %player% list to see all multipliers."
-check-header: "&6&m----------------[ &eMultipliers for %player% &6&m]----------------"
-check-line-permanent: " &8- &fPermanent (&b%currency%&f): &a%amount%x"
-check-line-temporary: " &8- &fTemporary (&b%currency%&f): &a%amount%x &7(%time% left)"
-check-rank: " &8- &fRank Multiplier (&bAll&f): &a%amount%x"
-check-none: "&cThis player has no active multipliers."
-check-footer: "&6&m----------------------------------------------------"
-
-# Set/Remove confirmation messages
-set-player-multiplier: "&aSet &e%player%'s &apermanent multiplier for &e%currency% &ato &e%amount%x."
-set-global-temp-multiplier: "&aSet the global temporary multiplier for &e%currency% &ato &e%amount%x &afor &e%time%."
-set-player-temp-multiplier: "&aSet &e%player%'s &atemporary multiplier for &e%currency% &ato &e%amount%x &afor &e%time%."
-remove-global-multiplier: "&aRemoved the global temporary multiplier for &e%currency%."
-remove-player-multiplier: "&aRemoved &e%player%'s &amultipliers for &e%currency%."
-
-# Reload Message
-reload-success: "&aConfiguration and messages have been reloaded successfully."
+set-player-multiplier: "&aSet &e%player%&a's permanent &e%currency% &amultiplier to &e%amount%x&a."
+set-player-temp-multiplier: "&aSet &e%player%&a's temporary &e%currency% &amultiplier to &e%amount%x &afor &e%time%&a."
+set-global-temp-multiplier: "&aSet global temporary &e%currency% &amultiplier to &e%amount%x &afor &e%time%&a."
+error-global-permanent: "&cYou cannot set a permanent global multiplier."
+remove-player-multiplier: "&aRemoved &e%player%&a's &e%currency% &amultipliers."
+remove-global-multiplier: "&aRemoved global &e%currency% &amultiplier."
 
 # BossBar Message
 bossbar-text: "&a%currency% Multiplier: &e%amount%x &afor &e%time%"
 
-# Voucher Messages
-usage-voucher: "&cUsage: /bmulti voucher <player> <amount> <time> <currency>"
-voucher-created: "&aSuccessfully created and gave a %multiplier%x voucher to %player%."
-voucher-redeemed: "&aYou have redeemed a %multiplier%x multiplier for %currency% that will last for %time%."
+# Help Message
+help-message:
+  - "&6&lMultiplier Commands"
+  - "&e/bmulti <player> [currency] &7- Check a player's multiplier."
+  - "&e/bmulti storage &7- Open your multiplier storage."
+  - "&e/bmulti reload &7- Reload the plugin."
+  - "&e/bmulti set <player> <amount> [currency] &7- Set a permanent multiplier."
+  - "&e/bmulti settemp <player|global> <amount> <time> [currency] &7- Set a temporary multiplier."
+  - "&e/bmulti remove <player|global> [currency] &7- Remove a multiplier."
+  - "&e/bmulti voucher <player> <amount> <time> <currency> &7- Give a multiplier voucher."

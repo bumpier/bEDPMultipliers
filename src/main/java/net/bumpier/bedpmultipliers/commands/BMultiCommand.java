@@ -2,8 +2,10 @@
 package net.bumpier.bedpmultipliers.commands;
 
 import net.bumpier.bedpmultipliers.BEDPMultipliers;
+import net.bumpier.bedpmultipliers.data.StoredVoucher;
 import net.bumpier.bedpmultipliers.managers.ConfigManager;
 import net.bumpier.bedpmultipliers.managers.MultiplierManager;
+import net.bumpier.bedpmultipliers.managers.StorageManager;
 import net.bumpier.bedpmultipliers.managers.VoucherManager;
 import net.bumpier.bedpmultipliers.utils.TimeUtil;
 import org.bukkit.Bukkit;
@@ -25,12 +27,14 @@ public final class BMultiCommand implements TabExecutor {
     private final MultiplierManager multiplierManager;
     private final ConfigManager configManager;
     private final VoucherManager voucherManager;
+    private final StorageManager storageManager;
 
-    public BMultiCommand(BEDPMultipliers plugin, MultiplierManager multiplierManager, ConfigManager configManager, VoucherManager voucherManager) {
+    public BMultiCommand(BEDPMultipliers plugin, MultiplierManager multiplierManager, ConfigManager configManager, VoucherManager voucherManager, StorageManager storageManager) {
         this.plugin = plugin;
         this.multiplierManager = multiplierManager;
         this.configManager = configManager;
         this.voucherManager = voucherManager;
+        this.storageManager = storageManager;
     }
 
     @Override
@@ -48,6 +52,7 @@ public final class BMultiCommand implements TabExecutor {
             case "set" -> handleSet(sender, args);
             case "settemp" -> handleSetTemp(sender, args);
             case "remove" -> handleRemove(sender, args);
+            case "storage" -> handleStorage(sender);
             default -> handleCheck(sender, args);
         }
         return true;
@@ -56,7 +61,7 @@ public final class BMultiCommand implements TabExecutor {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            List<String> subCommands = new ArrayList<>(List.of("set", "settemp", "remove", "reload", "voucher"));
+            List<String> subCommands = new ArrayList<>(List.of("set", "settemp", "remove", "reload", "voucher", "storage"));
             return Stream.concat(
                     subCommands.stream(),
                     Bukkit.getOnlinePlayers().stream().map(Player::getName)
@@ -64,20 +69,29 @@ public final class BMultiCommand implements TabExecutor {
         }
 
         if (args.length == 2) {
-            // Suggest players/global for admin commands
             if (List.of("set", "settemp", "remove", "voucher").contains(args[0].toLowerCase())) {
                 List<String> completions = Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
                 if (!args[0].equalsIgnoreCase("voucher")) {
                     completions.add("global");
                 }
                 return completions.stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
-            }
-            // Suggest 'list' after a player name
-            else if (sender.hasPermission("bmultipliers.player")) {
+            } else if (sender.hasPermission("bmultipliers.player")) {
                 return List.of("list").stream().filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase())).collect(Collectors.toList());
             }
         }
         return new ArrayList<>();
+    }
+
+    private void handleStorage(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return;
+        }
+        if (!sender.hasPermission("bmultipliers.storage")) {
+            sender.sendMessage(configManager.getMessage("no-permission"));
+            return;
+        }
+        storageManager.openStorageGUI(player);
     }
 
     private void sendUsage(CommandSender sender) {
@@ -98,14 +112,13 @@ public final class BMultiCommand implements TabExecutor {
             sender.sendMessage(configManager.getMessage("no-permission"));
             return;
         }
-        // Usage: /bmulti voucher <player> <amount> <time> <currency>
         if (args.length < 5) {
             sender.sendMessage(configManager.getMessage("usage-voucher"));
             return;
         }
 
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) {
+        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(args[1]);
+        if (!targetPlayer.hasPlayedBefore() && !targetPlayer.isOnline()) {
             sender.sendMessage(configManager.getMessage("player-not-found"));
             return;
         }
@@ -125,13 +138,19 @@ public final class BMultiCommand implements TabExecutor {
         }
 
         String currency = args[4].toLowerCase();
+        StoredVoucher voucher = new StoredVoucher(amount, duration, currency);
+        storageManager.addVoucherToStorage(targetPlayer.getUniqueId(), voucher);
 
-        voucherManager.createVoucher(target, amount, duration, TimeUtil.formatDuration(duration), currency);
-
-        sender.sendMessage(configManager.getMessage("voucher-created")
-                .replace("%player%", target.getName())
+        String message = configManager.getMessage("voucher-stored")
                 .replace("%multiplier%", String.valueOf(amount))
-        );
+                .replace("%currency%", configManager.getFormattedCurrency(currency))
+                .replace("%time%", TimeUtil.formatDuration(duration));
+
+        if (targetPlayer.isOnline()) {
+            targetPlayer.getPlayer().sendMessage(message);
+        }
+
+        sender.sendMessage(message.replace("your", targetPlayer.getName() + "'s"));
     }
 
     private void handleCheck(CommandSender sender, String[] args) {

@@ -1,23 +1,8 @@
 # File: src/main/resources/config.yml
-# bEDPMultipliers Configuration
+# bedpmultipliers Configuration
 
 # Enable debug messages in the console.
 debug: false
-
-# --- Storage Settings ---
-# method: The storage method to use. Can be 'json' or 'mysql'.
-#         json is simple and requires no setup.
-#         mysql is recommended for larger servers for better performance.
-storage:
-  method: 'json'
-  mysql:
-    host: 'localhost'
-    port: 3306
-    database: 'minecraft'
-    username: 'user'
-    password: 'password'
-    table-prefix: 'bmulti_'
-    ssl: false
 
 # The base multiplier applied to all players when no other multipliers are found.
 global-multiplier: 1.0
