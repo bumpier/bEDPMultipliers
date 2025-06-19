@@ -60,6 +60,7 @@ storage-gui:
       - "&7Click to change sorting."
       - "&7Current: &e%state%"
     slot: 2
+
   sort-by-time-item:
     material: "CLOCK"
     name: "&bSort by Time"
@@ -67,6 +68,7 @@ storage-gui:
       - "&7Click to change sorting."
       - "&7Current: &e%state%"
     slot: 4
+
   filter-by-currency-item:
     material: "DIAMOND"
     name: "&3Filter by Currency"

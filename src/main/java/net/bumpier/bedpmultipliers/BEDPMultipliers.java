@@ -45,9 +45,9 @@ public final class BEDPMultipliers extends JavaPlugin {
         Objects.requireNonNull(getCommand("bmulti")).setTabCompleter(commandExecutor);
 
         getServer().getPluginManager().registerEvents(new MultiplierListener(multiplierManager, debugLogger), this);
-        getServer().getPluginManager().registerEvents(new PlayerConnectionListener(bossBarManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerConnectionListener(bossBarManager, storageManager), this);
         getServer().getPluginManager().registerEvents(new VoucherListener(this, multiplierManager, configManager, debugLogger), this);
-        getServer().getPluginManager().registerEvents(new StorageGUIListener(storageManager, multiplierManager, voucherManager, configManager, guiManager), this);
+        getServer().getPluginManager().registerEvents(new StorageGUIListener(this, storageManager, multiplierManager, voucherManager, configManager, guiManager), this);
 
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {

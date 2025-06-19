@@ -3,6 +3,7 @@ package net.bumpier.bedpmultipliers.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import net.bumpier.bedpmultipliers.BEDPMultipliers;
 import net.bumpier.bedpmultipliers.data.PlayerData;
 import net.bumpier.bedpmultipliers.data.PluginData;
 import net.bumpier.bedpmultipliers.data.TemporaryMultiplier;
@@ -23,7 +24,7 @@ public final class MultiplierManager {
     private static final String GLOBAL_CURRENCY_KEY = "__global__";
 
     private final JavaPlugin plugin;
-    private final net.bumpier.bedpmultipliers.managers.ConfigManager configManager;
+    private final ConfigManager configManager;
     private final DebugLogger debugLogger;
     private final File dataFile;
     private final Gson gson;
@@ -31,7 +32,7 @@ public final class MultiplierManager {
     private PluginData data;
     private boolean dirty = false;
 
-    public MultiplierManager(JavaPlugin plugin, net.bumpier.bedpmultipliers.managers.ConfigManager configManager, DebugLogger debugLogger) {
+    public MultiplierManager(JavaPlugin plugin, ConfigManager configManager, DebugLogger debugLogger) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.debugLogger = debugLogger;
@@ -85,6 +86,10 @@ public final class MultiplierManager {
         return data.getPlayers().computeIfAbsent(uuid, k -> new PlayerData());
     }
 
+    public JavaPlugin getPlugin() {
+        return plugin;
+    }
+
 
     // --- Setters ---
 
@@ -99,8 +104,22 @@ public final class MultiplierManager {
     }
 
     public void setPlayerTemporaryMultiplier(UUID uuid, String currency, double amount, long duration) {
-        TemporaryMultiplier tempMulti = new TemporaryMultiplier(amount, duration, System.currentTimeMillis() + duration, System.currentTimeMillis());
-        getPlayerData(uuid).getTemporary().put(currency, tempMulti);
+        PlayerData playerData = getPlayerData(uuid);
+        Map<String, TemporaryMultiplier> tempMap = playerData.getTemporary();
+        TemporaryMultiplier existing = tempMap.get(currency);
+
+        long finalDuration = duration;
+
+        if (existing != null && existing.isActive() && Double.compare(existing.getAmount(), amount) == 0) {
+            // If an active multiplier of the same amount exists, stack the duration.
+            long remainingTime = existing.getExpiry() - System.currentTimeMillis();
+            if (remainingTime > 0) {
+                finalDuration += remainingTime;
+            }
+        }
+
+        TemporaryMultiplier newMulti = new TemporaryMultiplier(amount, finalDuration, System.currentTimeMillis() + finalDuration, System.currentTimeMillis());
+        tempMap.put(currency, newMulti);
         dirty = true;
     }
 
@@ -110,8 +129,21 @@ public final class MultiplierManager {
     }
 
     public void setGlobalTemporaryMultiplier(String currency, double amount, long duration) {
-        TemporaryMultiplier tempMulti = new TemporaryMultiplier(amount, duration, System.currentTimeMillis() + duration, System.currentTimeMillis());
-        data.getGlobal().getTemporary().put(currency, tempMulti);
+        Map<String, TemporaryMultiplier> tempMap = data.getGlobal().getTemporary();
+        TemporaryMultiplier existing = tempMap.get(currency);
+
+        long finalDuration = duration;
+
+        if (existing != null && existing.isActive() && Double.compare(existing.getAmount(), amount) == 0) {
+            // If an active multiplier of the same amount exists, stack the duration.
+            long remainingTime = existing.getExpiry() - System.currentTimeMillis();
+            if (remainingTime > 0) {
+                finalDuration += remainingTime;
+            }
+        }
+
+        TemporaryMultiplier newMulti = new TemporaryMultiplier(amount, finalDuration, System.currentTimeMillis() + finalDuration, System.currentTimeMillis());
+        tempMap.put(currency, newMulti);
         dirty = true;
     }
 
@@ -216,18 +248,10 @@ public final class MultiplierManager {
         return highestPermMulti > 0 ? highestPermMulti : 1.0;
     }
 
-    /**
-     * [RE-ADDED] This method was re-added to fix a compilation error.
-     * It is used by PlaceholderAPI to get the total multiplier for the global currency.
-     */
     public double getGlobalTotalMultiplier(OfflinePlayer player) {
         return getTotalMultiplier(player, GLOBAL_CURRENCY_KEY);
     }
 
-    /**
-     * [RE-ADDED] This method was re-added to fix a compilation error.
-     * It is used by PlaceholderAPI to get the most significant active temporary multiplier.
-     */
     public double getGlobalActiveTempMultiplier(OfflinePlayer player) {
         double playerTemp = getPlayerTemporaryMultiplier(player.getUniqueId(), GLOBAL_CURRENCY_KEY);
         double globalTemp = getGlobalTemporaryMultiplier(GLOBAL_CURRENCY_KEY);

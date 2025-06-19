@@ -13,19 +13,22 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 import java.util.Optional;
 
 public class StorageGUIListener implements Listener {
 
+    private final JavaPlugin plugin;
     private final StorageManager storageManager;
     private final MultiplierManager multiplierManager;
     private final VoucherManager voucherManager;
     private final ConfigManager configManager;
     private final GUIManager guiManager;
 
-    public StorageGUIListener(StorageManager storageManager, MultiplierManager multiplierManager, VoucherManager voucherManager, ConfigManager configManager, GUIManager guiManager) {
+    public StorageGUIListener(JavaPlugin plugin, StorageManager storageManager, MultiplierManager multiplierManager, VoucherManager voucherManager, ConfigManager configManager, GUIManager guiManager) {
+        this.plugin = plugin;
         this.storageManager = storageManager;
         this.multiplierManager = multiplierManager;
         this.voucherManager = voucherManager;
@@ -46,9 +49,10 @@ public class StorageGUIListener implements Listener {
 
         if (clickedItem == null || clickedItem.getType().isAir()) return;
 
-        // --- Navigation ---
         int currentPage = storageManager.getPlayerPage(player.getUniqueId());
-        if (currentPage == -1) return;
+        if (currentPage == -1) return; // Player session not found, should not happen
+
+        // --- Navigation ---
         if (clickedSlot == guiManager.getStorageGuiPrevPageSlot()) {
             storageManager.openStorageGUI(player, currentPage - 1);
             return;
@@ -67,6 +71,7 @@ public class StorageGUIListener implements Listener {
 
     private boolean handleSortAndFilter(Player player, int slot) {
         SortType currentSort = storageManager.getPlayerSort(player.getUniqueId());
+        boolean stateChanged = true;
 
         if (slot == guiManager.getSortByAmountSlot()) {
             if (currentSort == SortType.AMOUNT_ASC) storageManager.setPlayerSort(player.getUniqueId(), SortType.AMOUNT_DESC);
@@ -78,19 +83,24 @@ public class StorageGUIListener implements Listener {
             else storageManager.setPlayerSort(player.getUniqueId(), SortType.TIME_ASC);
         } else if (slot == guiManager.getFilterByCurrencySlot()) {
             List<String> currencies = storageManager.getAvailableCurrencies(player.getUniqueId());
+            if (currencies.size() <= 1) return true; // Don't cycle if there's nothing to cycle to
             String currentFilter = storageManager.getPlayerCurrencyFilter(player.getUniqueId());
             int currentIndex = currencies.indexOf(currentFilter);
             String nextFilter = currencies.get((currentIndex + 1) % currencies.size());
             storageManager.setPlayerCurrencyFilter(player.getUniqueId(), nextFilter);
         } else {
-            return false; // Not a sort/filter button
+            stateChanged = false; // Not a sort/filter button
         }
 
-        storageManager.openStorageGUI(player, 1);
-        return true;
+        if (stateChanged) {
+            storageManager.openStorageGUI(player, 1);
+        }
+
+        return stateChanged;
     }
 
     private void handleVoucherClick(Player player, ItemStack item, InventoryClickEvent event) {
+        if (item.getItemMeta() == null) return;
         PersistentDataContainer pdc = item.getItemMeta().getPersistentDataContainer();
         if (!pdc.has(storageManager.getStorageIdKey(), PersistentDataType.LONG)) return;
 
@@ -115,14 +125,5 @@ public class StorageGUIListener implements Listener {
                 player.sendMessage(configManager.getMessage("voucher-withdrawn"));
             }
         });
-    }
-
-    @EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        String title = event.getView().getTitle();
-        String configTitle = configManager.formatColors(guiManager.getStorageGuiTitle());
-        if (title.startsWith(configTitle.split("%page%")[0])) {
-            storageManager.removePlayerFromPageTracking(event.getPlayer().getUniqueId());
-        }
     }
 }

@@ -197,6 +197,12 @@ public class StorageManager {
         return storageIdKey;
     }
 
+    public void clearPlayerData(UUID uuid) {
+        playerPages.remove(uuid);
+        playerSorts.remove(uuid);
+        playerCurrencyFilters.remove(uuid);
+    }
+
     public SortType getPlayerSort(UUID uuid) { return playerSorts.getOrDefault(uuid, SortType.DEFAULT); }
     public void setPlayerSort(UUID uuid, SortType sortType) { playerSorts.put(uuid, sortType); }
     public String getPlayerCurrencyFilter(UUID uuid) { return playerCurrencyFilters.getOrDefault(uuid, "All"); }
