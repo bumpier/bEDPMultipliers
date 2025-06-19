@@ -1,0 +1,45 @@
+# File: src/main/resources/vouchers.yml
+#
+# Define and map your multiplier voucher templates here.
+
+# A map to link a specific currency ID to a voucher template from the section below.
+# If a currency is not listed here, it will use the 'default' template.
+currency-map:
+  tokens: 'token_voucher'
+  money: 'money_voucher'
+
+# Define all your voucher templates here.
+templates:
+  # This is the fallback template used for any currency not in the currency-map above.
+  default:
+    item: 'PAPER'
+    name: '&a&l%multiplier%x &f%currency% Multiplier &7(%time%)'
+    lore:
+      - '&7Right-click to redeem this voucher.'
+      - ''
+      - '&fMultiplier: &e%multiplier%x'
+      - '&fCurrency: &e%currency%'
+      - '&fDuration: &e%time%'
+    glowing: true
+
+  # A custom template for 'tokens'
+  token_voucher:
+    item: 'BOOK'
+    name: '&e&l%multiplier%x &6Token Multiplier &7(%time%)'
+    lore:
+      - '&7A special voucher for shiny tokens!'
+      - ''
+      - '&7Multiplier: &f%multiplier%x'
+      - '&8Duration: &f%time%'
+    glowing: true
+
+  # A custom template for 'money'
+  money_voucher:
+    item: 'BOOK'
+    name: '&a&l%multiplier%x &2Money Multiplier &7(%time%)'
+    lore:
+      - '&7A valuable voucher for rare vouchers!'
+      - ''
+      - '&7Multiplier: &f%multiplier%x'
+      - '&8Duration: &f%time%'
+    glowing: false
